@@ -10,6 +10,8 @@ import (
 	"time"
 
 	vkapi "github.com/SevereCloud/vksdk/v3/api"
+    "github.com/jmoiron/sqlx"
+    _ "github.com/mattn/go-sqlite3"
 )
 
 type Group struct {
@@ -30,11 +32,20 @@ var (
 func main() {
 	initLogger()
 	vkToken := os.Getenv("VK_TOKEN") // user or service token sufficient for public walls
+    // DB connection string for mattn/go-sqlite3
+    cfg := struct{ DBConnString string }{DBConnString: os.Getenv("DB_CONN_STRING")}
+    if cfg.DBConnString == "" {
+        cfg.DBConnString = "file:lostdogs.db?_busy_timeout=5000&_fk=1"
+    }
 
 	if vkToken == "" {
 		slog.Error("VK_TOKEN is required")
 		os.Exit(1)
 	}
+    // Initialize DB using sqlx and apply schema
+    var svc service
+    svc.db = sqlx.MustConnect("sqlite3", cfg.DBConnString)
+    svc.db.MustExec(schema)
 
 	vk := vkapi.NewVK(vkToken)
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -64,7 +75,7 @@ func main() {
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			slog.Debug("tick: scanning groups", "count", len(gs))
 			for i := range gs {
-				if err := scanGroup(ctx, vk, &gs[i]); err != nil {
+				if err := scanGroup(ctx, vk, &svc, &gs[i]); err != nil {
 					slog.Error("scan group failed", "screen_name", gs[i].ScreenName, "err", err)
 				}
 				time.Sleep(500 * time.Millisecond) // rate-limit spacing
@@ -85,7 +96,7 @@ func resolveGroupID(vk *vkapi.VK, screen string) (int, error) {
 	return resp.ObjectID, nil
 }
 
-func scanGroup(ctx context.Context, vk *vkapi.VK, g *Group) error {
+func scanGroup(ctx context.Context, vk *vkapi.VK, svc *service, g *Group) error {
 	// Get last N posts; if you need deeper history, implement offset pagination.
 	slog.Debug("wall.get request", "owner_id", -g.ID, "count", 50, "last_ts", g.LastTS)
 	resp, err := vk.WallGet(vkapi.Params{
@@ -108,7 +119,12 @@ func scanGroup(ctx context.Context, vk *vkapi.VK, g *Group) error {
 			continue
 		}
 		text := normalize(post.Text)
-		slog.Info("got msg", "owner_id", post.OwnerID, "post_id", post.ID, "date", post.Date, "text", text)
+		link := fmt.Sprintf("https://vk.com/wall%d_%d", post.OwnerID, post.ID)
+		slog.Info("got msg", "owner_id", post.OwnerID, "post_id", post.ID, "date", post.Date, "text", text, "link", link)
+		// Persist new message in SQLite (best-effort)
+		if err := svc.SaveMessage(post.OwnerID, post.ID, int64(post.Date), text, link, ""); err != nil {
+			slog.Error("db save failed", "err", err, "owner_id", post.OwnerID, "post_id", post.ID)
+		}
 		seen[key] = struct{}{}
 		if post.Date > int(g.LastTS) {
 			old := g.LastTS
