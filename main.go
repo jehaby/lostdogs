@@ -12,6 +12,7 @@ import (
 	vkapi "github.com/SevereCloud/vksdk/v3/api"
     "github.com/jmoiron/sqlx"
     _ "github.com/mattn/go-sqlite3"
+    "github.com/caarlos0/env/v11"
 )
 
 type Group struct {
@@ -25,29 +26,32 @@ var groups = []string{
 }
 
 var (
-	// payload dedupe: memory map; use sqlite/redis in prod
-	seen = make(map[string]struct{})
+    // payload dedupe: memory map; use sqlite/redis in prod
+    seen = make(map[string]struct{})
 )
 
-func main() {
-	initLogger()
-	vkToken := os.Getenv("VK_TOKEN") // user or service token sufficient for public walls
-    // DB connection string for mattn/go-sqlite3
-    cfg := struct{ DBConnString string }{DBConnString: os.Getenv("DB_CONN_STRING")}
-    if cfg.DBConnString == "" {
-        cfg.DBConnString = "file:lostdogs.db?_busy_timeout=5000&_fk=1"
-    }
+// Config parsed from environment.
+type config struct {
+    VKToken           string     `env:"VK_TOKEN,required"`
+    LogLevel          slog.Level `env:"LOG_LEVEL" envDefault:"info"`
+    TGBotDebugEnabled bool       `env:"TGBOT_DEBUG_ENABLED" envDefault:"false"`
+    DBConnString      string     `env:"DB_CONN_STRING" envDefault:"file:./db/bot.db?cache=shared&mode=rwc"`
+}
 
-	if vkToken == "" {
-		slog.Error("VK_TOKEN is required")
-		os.Exit(1)
-	}
+func main() {
+    // Parse config from environment
+    cfg := config{}
+    if err := env.Parse(&cfg); err != nil {
+        slog.Error("error parsing config", "err", err)
+        os.Exit(1)
+    }
+    initLogger(cfg.LogLevel)
     // Initialize DB using sqlx and apply schema
     var svc service
     svc.db = sqlx.MustConnect("sqlite3", cfg.DBConnString)
     svc.db.MustExec(schema)
 
-	vk := vkapi.NewVK(vkToken)
+    vk := vkapi.NewVK(cfg.VKToken)
 	client := &http.Client{Timeout: 10 * time.Second}
 	vk.Client = client
 	slog.Info("VK client initialized", "timeout", client.Timeout)
@@ -135,18 +139,9 @@ func scanGroup(ctx context.Context, vk *vkapi.VK, svc *service, g *Group) error 
 	return nil
 }
 
-func initLogger() {
-	levelVar := new(slog.LevelVar)
-	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
-	case "debug":
-		levelVar.Set(slog.LevelDebug)
-	case "warn", "warning":
-		levelVar.Set(slog.LevelWarn)
-	case "error":
-		levelVar.Set(slog.LevelError)
-	default:
-		levelVar.Set(slog.LevelInfo)
-	}
+func initLogger(level slog.Level) {
+    levelVar := new(slog.LevelVar)
+    levelVar.Set(level)
 
 	var handler slog.Handler
 	if strings.ToLower(os.Getenv("LOG_FORMAT")) == "json" {
