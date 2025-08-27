@@ -1,0 +1,31 @@
+# Binaries and build artifacts
+bin/
+build/
+dist/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+
+# Go workspace files
+go.work
+go.work.sum
+
+# SQLite databases and logs
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Environment and direnv
+.envrc
+.direnv/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
