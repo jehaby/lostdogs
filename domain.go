@@ -72,7 +72,7 @@ var (
 	reFound       = regexp.MustCompile(`(?i)(найден[аоы]?|нашл[аи]|подобрал[аи])`)
 	reSighting    = regexp.MustCompile(`(?i)(замечен[ао]?|видел[аи]?|бегает|появил[асься])`)
 	reAdoption    = regexp.MustCompile(`(?i)(ищет\s+дом|в\s+добрые\s+руки|отда[ёмм]|пристраив[ае])`)
-	reCareMarkers = regexp.MustCompile(`(?i)(стерилиз|кастрир|вакц|привит|чипир|лоток)`) // for adoption leaning
+	reCareMarkers = regexp.MustCompile(`(?i)(стерилиз|кастрир|вакц|привит|чипир|лоток|лотк)`) // for adoption leaning
 	// Use Unicode-safe boundaries: ASCII \b doesn't handle Cyrillic correctly.
 	reFundraising  = regexp.MustCompile(`(?i)(^|[^\p{L}\d])(сбор|оплатить|перевод|передержк|карта)([^\p{L}\d]|$)`)
 	reTieFoundSpec = regexp.MustCompile(`(?i)найден\S*.*(кот|собак|п[её]с|кобел|щен|живот)`) // specific found pattern
@@ -83,15 +83,16 @@ var (
 	reVKBracket = regexp.MustCompile(`\[(id\d+)\|([^\]]+)\]`)
 
 	// Note: Go RE2 doesn't support negative lookahead; keep it simple.
-	// Avoid ASCII word-boundaries; use explicit fragments and whitespace/end checks where needed.
-	reCat  = regexp.MustCompile(`(?i)кошечк|кошк|кот\s|кот[её]н|кис[ао]ньк|бенгальск`)
+	// Avoid ASCII word-boundaries; use explicit fragments and common punctuation/space/end checks.
+	reCat  = regexp.MustCompile(`(?i)кошечк|кошк|кот(?:\s|[.,!?:;]|$)|кот[её]н|кис[ао]ньк|бенгальск`)
 	reDog  = regexp.MustCompile(`(?i)собак|пс|п[её]с(?:\s|$)|п[её]сик|кобел|щен`)
 	reMale = regexp.MustCompile(`(?i)кобел(ё|е)к|мальчик`)
 	reFem  = regexp.MustCompile(`(?i)девочк|сука`)
 
 	reBreed = regexp.MustCompile(`(?i)бенгальск[аяийое]|йорк(?:шир(?:ск(?:ий|ая))?)?|лабрадор|овчарк|хаск|такс|спаниел|метис`)
 
-	reAge  = regexp.MustCompile(`(?i)(\d+[,.]?\d*|\d+\s*-\s*\d+)\s*(мес|месяц|месяцев|год|года|лет)`) // capture first concise
+	// Allow compact forms like "2х месяцев" (optional x/х after number).
+	reAge  = regexp.MustCompile(`(?i)(\d+[,.]?\d*|\d+\s*-\s*\d+)\s*[xх]?\s*(мес|месяц|месяцев|год|года|лет)`) // capture first concise
 	reDate = regexp.MustCompile(`\b\d{1,2}[.]\d{1,2}[.]\d{2,4}\b`)
 	reTime = regexp.MustCompile(`(?i)(?:в\s*)?\b\d{1,2}[:.]\d{2}\b`)
 
@@ -313,21 +314,46 @@ func extractWhen(s string) string {
 }
 
 func extractLocationHeuristic(s string) string {
-	// Split by commas and pick shortest segment with a trigger
+	// Split by commas and pick shortest segment with a trigger.
+	// If the next comma-separated segment is a numeric-like house number,
+	// append it to the candidate (e.g., "Пушкинская улица, 283" → "Пушкинская улица 283").
 	parts := strings.Split(s, ",")
 	best := ""
-	for _, seg := range parts {
-		t := strings.TrimSpace(seg)
+	for i := 0; i < len(parts); i++ {
+		t := strings.TrimSpace(parts[i])
 		if t == "" {
 			continue
 		}
 		if reLocTrigger.MatchString(t) {
-			if best == "" || len([]rune(t)) < len([]rune(best)) {
-				best = t
+			cand := t
+			if i+1 < len(parts) {
+				nxt := strings.TrimSpace(parts[i+1])
+				if nxt != "" && isNumericLike(nxt) {
+					cand = strings.TrimSpace(cand + " " + nxt)
+				}
+			}
+			if best == "" || len([]rune(cand)) < len([]rune(best)) {
+				best = cand
 			}
 		}
 	}
 	return best
+}
+
+func isNumericLike(s string) bool {
+	// true if runes are digits, spaces or dashes only and at least one digit present
+	hasDigit := false
+	for _, r := range s {
+		if r >= '0' && r <= '9' {
+			hasDigit = true
+			continue
+		}
+		if r == ' ' || r == '-' {
+			continue
+		}
+		return false
+	}
+	return hasDigit
 }
 
 func extractStatusDetails(s string) string {
