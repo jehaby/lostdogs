@@ -16,6 +16,11 @@
   ```sh
   go build -o bin/lostdogs .
   ```
+- After every code change:
+  
+  ```sh
+  go fmt ./...
+  ```
 - Format and vet:
   
   ```sh
