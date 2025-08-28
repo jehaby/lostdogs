@@ -23,127 +23,127 @@ type wantCase struct {
 }
 
 func TestParse_Table(t *testing.T) {
-    cases := []struct {
-        name string
-        text string
-        want wantCase
-    }{
-        {
-            name: "Lost cat with address and phone",
-            text: "Пропала кошка! Срочно нужна помощь. Пушкинская улица, 283, Ижевск. Телефон: 79120281683. Имя хозяина: Юрий. Кошка Мася",
-            want: wantCase{
-                Type:             TypeLost,
-                Animal:           AnimalCat,
-                Phones:           []string{"+79120281683"},
-                LocationContains: []string{"Пушкинская улица", "283"},
-                ContactNamesHas:  []string{"Юрий"},
-            },
-        },
-        {
-            name: "Sighting dog no phone",
-            text: "Бегает на Закирова и Первомайской кобелек, похож на Йорка, поймать не смогли",
-            want: wantCase{
-                Type:             TypeSighting,
-                Animal:           AnimalDog,
-                BreedContains:    "йорк",
-                LocationContains: []string{"Закирова", "Первомайск"},
-            },
-        },
-        {
-            name: "Found cat with phone and name",
-            text: "Найден кот. Район Заречное шоссе 49. 89127500184 Александр",
-            want: wantCase{
-                Type:             TypeFound,
-                Animal:           AnimalCat,
-                Phones:           []string{"+79127500184"},
-                ContactNamesHas:  []string{"Александр"},
-                LocationContains: []string{"Заречное шоссе", "49"},
-            },
-        },
-        {
-            name: "Adoption sterilized vaccinated",
-            text: "Красивая кошечка, стерилизована, обработана. Лоток на отлично. 8-912-762-92-39 Ольга",
-            want: wantCase{
-                Type:             TypeAdoption,
-                Animal:           AnimalCat,
-                ExtrasSterilized: true,
-                ExtrasLitterOK:   true,
-                Phones:           []string{"+79127629239"},
-                ContactNamesHas:  []string{"Ольга"},
-            },
-        },
-        {
-            name: "Fundraising",
-            text: "Помочь оплатить передержку. Сумма к сбору. 📞 8912 4586329 Анна",
-            want: wantCase{
-                Type:            TypeFundraising,
-                Phones:          []string{"+79124586329"},
-                ContactNamesHas: []string{"Анна"},
-            },
-        },
-        {
-            name: "Lost with date time",
-            text: "Потерялась кошка. Воткинское шоссе 39 26.08.2025 примерно в 22:00. 89120216801",
-            want: wantCase{
-                Type:             TypeLost,
-                WhenContains:     []string{"26.08.2025"},
-                LocationContains: []string{"Воткинское шоссе", "39"},
-                Phones:           []string{"+79120216801"},
-            },
-        },
-        {
-            name: "Adoption kitten 2 months",
-            text: "Малышу около 2х месяцев, лотком пользуется, пишите Юлии 89501684430",
-            want: wantCase{
-                Type:        TypeAdoption,
-                AgeContains: "2",
-                Phones:      []string{"+79501684430"},
-            },
-        },
-        {
-            name: "Link only",
-            text: "https://vk.com/wall107929440_36",
-            want: wantCase{Type: TypeLink},
-        },
-        {
-            name: "Empty",
-            text: "",
-            want: wantCase{Type: TypeEmpty},
-        },
-        {
-            name: "Lost multiple areas with name",
-            text: "Мы потеряли кота. Районы Люкшудья и Шабердино. 8 922 405 26 12 - Татьяна",
-            want: wantCase{
-                Type:             TypeLost,
-                Phones:           []string{"+79224052612"},
-                ContactNamesHas:  []string{"Татьяна"},
-                LocationContains: []string{"Люкшудья", "Шабердино"},
-            },
-        },
-        {
-            name: "Adoption extras",
-            text: "стерилизована, вакцинирована. Лоток на отлично",
-            want: wantCase{
-                Type:             TypeAdoption,
-                ExtrasSterilized: true,
-                ExtrasVaccinated: true,
-                ExtrasLitterOK:   true,
-            },
-        },
-        {
-            name: "Adoption duplicate content style",
-            text: "Кошечка ищет дом, ласковая, 8 906 816 84 18",
-            want: wantCase{
-                Type:   TypeAdoption,
-                Animal: AnimalCat,
-                Phones: []string{"+79068168418"},
-            },
-        },
-    }
+	cases := []struct {
+		name string
+		text string
+		want wantCase
+	}{
+		{
+			name: "Lost cat with address and phone",
+			text: "Пропала кошка! Срочно нужна помощь. Пушкинская улица, 283, Ижевск. Телефон: 79120281683. Имя хозяина: Юрий. Кошка Мася",
+			want: wantCase{
+				Type:             TypeLost,
+				Animal:           AnimalCat,
+				Phones:           []string{"+79120281683"},
+				LocationContains: []string{"Пушкинская улица", "283"},
+				ContactNamesHas:  []string{"Юрий"},
+			},
+		},
+		{
+			name: "Sighting dog no phone",
+			text: "Бегает на Закирова и Первомайской кобелек, похож на Йорка, поймать не смогли",
+			want: wantCase{
+				Type:             TypeSighting,
+				Animal:           AnimalDog,
+				BreedContains:    "йорк",
+				LocationContains: []string{"Закирова", "Первомайск"},
+			},
+		},
+		{
+			name: "Found cat with phone and name",
+			text: "Найден кот. Район Заречное шоссе 49. 89127500184 Александр",
+			want: wantCase{
+				Type:             TypeFound,
+				Animal:           AnimalCat,
+				Phones:           []string{"+79127500184"},
+				ContactNamesHas:  []string{"Александр"},
+				LocationContains: []string{"Заречное шоссе", "49"},
+			},
+		},
+		{
+			name: "Adoption sterilized vaccinated",
+			text: "Красивая кошечка, стерилизована, обработана. Лоток на отлично. 8-912-762-92-39 Ольга",
+			want: wantCase{
+				Type:             TypeAdoption,
+				Animal:           AnimalCat,
+				ExtrasSterilized: true,
+				ExtrasLitterOK:   true,
+				Phones:           []string{"+79127629239"},
+				ContactNamesHas:  []string{"Ольга"},
+			},
+		},
+		{
+			name: "Fundraising",
+			text: "Помочь оплатить передержку. Сумма к сбору. 📞 8912 4586329 Анна",
+			want: wantCase{
+				Type:            TypeFundraising,
+				Phones:          []string{"+79124586329"},
+				ContactNamesHas: []string{"Анна"},
+			},
+		},
+		{
+			name: "Lost with date time",
+			text: "Потерялась кошка. Воткинское шоссе 39 26.08.2025 примерно в 22:00. 89120216801",
+			want: wantCase{
+				Type:             TypeLost,
+				WhenContains:     []string{"26.08.2025"},
+				LocationContains: []string{"Воткинское шоссе", "39"},
+				Phones:           []string{"+79120216801"},
+			},
+		},
+		{
+			name: "Adoption kitten 2 months",
+			text: "Малышу около 2х месяцев, лотком пользуется, пишите Юлии 89501684430",
+			want: wantCase{
+				Type:        TypeAdoption,
+				AgeContains: "2",
+				Phones:      []string{"+79501684430"},
+			},
+		},
+		{
+			name: "Link only",
+			text: "https://vk.com/wall107929440_36",
+			want: wantCase{Type: TypeLink},
+		},
+		{
+			name: "Empty",
+			text: "",
+			want: wantCase{Type: TypeEmpty},
+		},
+		{
+			name: "Lost multiple areas with name",
+			text: "Мы потеряли кота. Районы Люкшудья и Шабердино. 8 922 405 26 12 - Татьяна",
+			want: wantCase{
+				Type:             TypeLost,
+				Phones:           []string{"+79224052612"},
+				ContactNamesHas:  []string{"Татьяна"},
+				LocationContains: []string{"Люкшудья", "Шабердино"},
+			},
+		},
+		{
+			name: "Adoption extras",
+			text: "стерилизована, вакцинирована. Лоток на отлично",
+			want: wantCase{
+				Type:             TypeAdoption,
+				ExtrasSterilized: true,
+				ExtrasVaccinated: true,
+				ExtrasLitterOK:   true,
+			},
+		},
+		{
+			name: "Adoption duplicate content style",
+			text: "Кошечка ищет дом, ласковая, 8 906 816 84 18",
+			want: wantCase{
+				Type:   TypeAdoption,
+				Animal: AnimalCat,
+				Phones: []string{"+79068168418"},
+			},
+		},
+	}
 
-    for _, tc := range cases {
-        t.Run(tc.name, func(t *testing.T) {
-            got := Parse(0, tc.text)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := Parse(0, tc.text)
 
 			require.Equal(t, tc.want.Type, got.Type, "Type")
 
@@ -177,8 +177,8 @@ func TestParse_Table(t *testing.T) {
 			if tc.want.ExtrasLitterOK {
 				assert.True(t, got.Extras.LitterOK, "Extras.LitterOK")
 			}
-        })
-    }
+		})
+	}
 }
 
 // --- helpers ---
