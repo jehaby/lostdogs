@@ -2,16 +2,18 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	vkapi "github.com/SevereCloud/vksdk/v3/api"
 	"github.com/caarlos0/env/v11"
-	"github.com/jmoiron/sqlx"
+	sqldb "github.com/jehaby/lostdogs/internal/db"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -38,13 +40,29 @@ type config struct {
 }
 
 type service struct {
-	db *sqlx.DB
+	db      *sql.DB
+	queries *sqldb.Queries
 }
 
 func newService(cfg config) *service {
 	svc := &service{}
-	svc.db = sqlx.MustConnect("sqlite3", cfg.DBConnString)
-	svc.db.MustExec(schema)
+	// Open standard database/sql connection using sqlite3 driver
+	var err error
+	svc.db, err = sql.Open("sqlite3", cfg.DBConnString)
+	if err != nil {
+		slog.Error("open sqlite failed", "err", err)
+		os.Exit(1)
+	}
+	if err := svc.db.Ping(); err != nil {
+		slog.Error("ping sqlite failed", "err", err)
+		os.Exit(1)
+	}
+	// Ensure schema is applied from resources/db/schema.sql
+	if err := applySchemaFile(svc.db, "resources/db/schema.sql"); err != nil {
+		slog.Error("apply schema failed", "err", err)
+		os.Exit(1)
+	}
+	svc.queries = sqldb.New(svc.db)
 	return svc
 }
 
@@ -143,6 +161,38 @@ func scanGroup(ctx context.Context, vk *vkapi.VK, svc *service, g *Group) error 
 			g.LastTS = int64(post.Date)
 			slog.Debug("last_ts updated", "old", old, "new", g.LastTS)
 		}
+	}
+	return nil
+}
+
+// SaveMessage persists or updates a VK post using sqlc-generated queries.
+func (s *service) SaveMessage(ownerID int, postID int, date int64, text, link, attachments string) error {
+	// link and attachments are currently not stored; text is the normalized text.
+	// Use text as both normalized and raw until raw parsing is introduced upstream.
+	params := sqldb.UpsertPostParams{
+		OwnerID: int64(ownerID),
+		PostID:  int64(postID),
+		Date:    date,
+		Text:    text,
+		Raw:     text,
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	return s.queries.UpsertPost(ctx, params)
+}
+
+func applySchemaFile(db *sql.DB, schemaPath string) error {
+	// Resolve absolute path for better error messages
+	abs := schemaPath
+	if p, err := filepath.Abs(schemaPath); err == nil {
+		abs = p
+	}
+	b, err := os.ReadFile(schemaPath)
+	if err != nil {
+		return fmt.Errorf("read schema %s: %w", abs, err)
+	}
+	if _, err := db.Exec(string(b)); err != nil {
+		return fmt.Errorf("exec schema %s: %w", abs, err)
 	}
 	return nil
 }

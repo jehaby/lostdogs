@@ -5,7 +5,6 @@ go 1.25.0
 require (
 	github.com/SevereCloud/vksdk/v3 v3.2.0
 	github.com/caarlos0/env/v11 v11.3.1
-	github.com/jmoiron/sqlx v1.4.0
 	github.com/mattn/go-sqlite3 v1.14.28
 	github.com/stretchr/testify v1.10.0
 )
