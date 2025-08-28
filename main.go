@@ -30,12 +30,22 @@ var (
 	seen = make(map[string]struct{})
 )
 
-// Config parsed from environment.
 type config struct {
 	VKToken           string     `env:"VK_TOKEN,required"`
 	LogLevel          slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	TGBotDebugEnabled bool       `env:"TGBOT_DEBUG_ENABLED" envDefault:"false"`
 	DBConnString      string     `env:"DB_CONN_STRING" envDefault:"file:./db/bot.db?cache=shared&mode=rwc"`
+}
+
+type service struct {
+	db *sqlx.DB
+}
+
+func newService(cfg config) *service {
+	svc := &service{}
+	svc.db = sqlx.MustConnect("sqlite3", cfg.DBConnString)
+	svc.db.MustExec(schema)
+	return svc
 }
 
 func main() {
@@ -46,10 +56,8 @@ func main() {
 		os.Exit(1)
 	}
 	initLogger(cfg.LogLevel)
-	// Initialize DB using sqlx and apply schema
-	var svc service
-	svc.db = sqlx.MustConnect("sqlite3", cfg.DBConnString)
-	svc.db.MustExec(schema)
+
+	svc := newService(cfg)
 
 	vk := vkapi.NewVK(cfg.VKToken)
 	client := &http.Client{Timeout: 10 * time.Second}
@@ -79,7 +87,7 @@ func main() {
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			slog.Debug("tick: scanning groups", "count", len(gs))
 			for i := range gs {
-				if err := scanGroup(ctx, vk, &svc, &gs[i]); err != nil {
+				if err := scanGroup(ctx, vk, svc, &gs[i]); err != nil {
 					slog.Error("scan group failed", "screen_name", gs[i].ScreenName, "err", err)
 				}
 				time.Sleep(500 * time.Millisecond) // rate-limit spacing

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -23,11 +22,6 @@ CREATE TABLE IF NOT EXISTS messages (
 
 CREATE INDEX IF NOT EXISTS idx_messages_ts ON messages(ts);
 `
-
-// service holds application dependencies.
-type service struct {
-	db *sqlx.DB
-}
 
 // SaveMessage persists a found/forwarded post; duplicate keys are ignored.
 func (s *service) SaveMessage(ownerID, postID int, ts int64, text, link, photoURL string) error {
