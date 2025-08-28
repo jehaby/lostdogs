@@ -1,9 +1,9 @@
 package main
 
 import (
-    "fmt"
-    "github.com/jmoiron/sqlx"
-    _ "github.com/mattn/go-sqlite3"
+	"fmt"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // schema holds the DDL for initializing the local SQLite database.
@@ -26,17 +26,17 @@ CREATE INDEX IF NOT EXISTS idx_messages_ts ON messages(ts);
 
 // service holds application dependencies.
 type service struct {
-    db *sqlx.DB
+	db *sqlx.DB
 }
 
 // SaveMessage persists a found/forwarded post; duplicate keys are ignored.
 func (s *service) SaveMessage(ownerID, postID int, ts int64, text, link, photoURL string) error {
-    if s == nil || s.db == nil {
-        return fmt.Errorf("nil service db")
-    }
-    key := fmt.Sprintf("%d_%d", ownerID, postID)
-    const q = `INSERT OR IGNORE INTO messages (key, owner_id, post_id, ts, text, link, photo_url)
+	if s == nil || s.db == nil {
+		return fmt.Errorf("nil service db")
+	}
+	key := fmt.Sprintf("%d_%d", ownerID, postID)
+	const q = `INSERT OR IGNORE INTO messages (key, owner_id, post_id, ts, text, link, photo_url)
               VALUES (?, ?, ?, ?, ?, ?, ?)`
-    _, err := s.db.Exec(q, key, ownerID, postID, ts, text, link, photoURL)
-    return err
+	_, err := s.db.Exec(q, key, ownerID, postID, ts, text, link, photoURL)
+	return err
 }
