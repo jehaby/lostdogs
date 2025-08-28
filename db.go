@@ -6,21 +6,31 @@ import (
 )
 
 // schema holds the DDL for initializing the local SQLite database.
-// Keep this the single source of truth for schema migrations in this repo.
+// It matches the domain Post struct and avoids normalization for arrays (stored as JSON strings).
 const schema = `
-CREATE TABLE IF NOT EXISTS messages (
+CREATE TABLE IF NOT EXISTS posts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  key TEXT NOT NULL UNIQUE,             -- owner_id_post_id
-  owner_id INTEGER NOT NULL,
-  post_id INTEGER NOT NULL,
-  ts INTEGER NOT NULL,                  -- VK post unix timestamp
-  text TEXT NOT NULL,
-  link TEXT NOT NULL,                   -- https://vk.com/wall{owner_id}_{post_id}
-  photo_url TEXT,                       -- chosen preview photo (if any)
+  raw TEXT NOT NULL,
+  type TEXT NOT NULL DEFAULT 'unknown',
+  animal TEXT NOT NULL DEFAULT 'unknown',
+  breed TEXT NOT NULL DEFAULT '',
+  sex TEXT NOT NULL DEFAULT 'unknown',
+  age TEXT NOT NULL DEFAULT '',
+  name TEXT NOT NULL DEFAULT '',
+  location TEXT NOT NULL DEFAULT '',
+  "when" TEXT NOT NULL DEFAULT '',
+  phones TEXT NOT NULL DEFAULT '[]',
+  contact_names TEXT NOT NULL DEFAULT '[]',
+  vk_accounts TEXT NOT NULL DEFAULT '[]',
+  status_details TEXT NOT NULL DEFAULT '',
+  extras_sterilized INTEGER NOT NULL DEFAULT 0,
+  extras_vaccinated INTEGER NOT NULL DEFAULT 0,
+  extras_chipped INTEGER NOT NULL DEFAULT 0,
+  extras_litter_ok INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-
-CREATE INDEX IF NOT EXISTS idx_messages_ts ON messages(ts);
+CREATE INDEX IF NOT EXISTS idx_posts_type ON posts(type);
+CREATE INDEX IF NOT EXISTS idx_posts_animal ON posts(animal);
 `
 
 // SaveMessage persists a found/forwarded post; duplicate keys are ignored.
@@ -28,9 +38,9 @@ func (s *service) SaveMessage(ownerID, postID int, ts int64, text, link, photoUR
 	if s == nil || s.db == nil {
 		return fmt.Errorf("nil service db")
 	}
-	key := fmt.Sprintf("%d_%d", ownerID, postID)
-	const q = `INSERT OR IGNORE INTO messages (key, owner_id, post_id, ts, text, link, photo_url)
-              VALUES (?, ?, ?, ?, ?, ?, ?)`
-	_, err := s.db.Exec(q, key, ownerID, postID, ts, text, link, photoURL)
+	// Minimal insert into posts, mapping only available fields.
+	// Arrays are stored as empty JSON by default; other fields default to unknown/empty.
+	const q = `INSERT INTO posts (raw) VALUES (?)`
+	_, err := s.db.Exec(q, text)
 	return err
 }
