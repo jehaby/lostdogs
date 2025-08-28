@@ -205,6 +205,48 @@ func sliceHasAll(hay []string, needles []string) bool {
 	return true
 }
 
+func TestDetectType_Table(t *testing.T) {
+	cases := []struct {
+		name string
+		text string
+		want PostType
+	}{
+		{name: "Lost: пропала", text: "Пропала кошка, Ижевск", want: TypeLost},
+		{name: "Lost: потерялся", text: "Потерялся пёсик дворняга", want: TypeLost},
+		{name: "Lost: убежал", text: "Убежал котик вчера", want: TypeLost},
+
+		{name: "Found: найден", text: "Найден кот во дворе", want: TypeFound},
+		{name: "Found: нашли", text: "Нашли собаку у магазина", want: TypeFound},
+		{name: "Found: подобрали", text: "Подобрали щенка у подъезда", want: TypeFound},
+
+		{name: "Sighting: бегает", text: "Бегает кобелек во дворе", want: TypeSighting},
+		{name: "Sighting: замечена", text: "Замечена собака у школы", want: TypeSighting},
+		{name: "Sighting: видели", text: "Видели кота на лестнице", want: TypeSighting},
+
+		{name: "Adoption: ищет дом", text: "Кошечка ищет дом, ласковая", want: TypeAdoption},
+		{name: "Adoption: добрые руки", text: "Отдаем котенка в добрые руки", want: TypeAdoption},
+		{name: "Adoption: care markers only", text: "Стерилизована, привита, лоток на отлично", want: TypeAdoption},
+
+		{name: "Fundraising: сбор", text: "Сбор на оплату передержки", want: TypeFundraising},
+		{name: "Fundraising: перевод/карта", text: "Нужен перевод на карту Сбер", want: TypeFundraising},
+
+		{name: "Tie both words → Found (найден...)", text: "Найден кот, потом потерялся", want: TypeFound},
+		{name: "Tie both words → Lost (без 'найден')", text: "Нашли собаку, но пропала позже", want: TypeLost},
+
+		{name: "Unknown", text: "Привет всем! Отличный день.", want: TypeUnknown},
+
+		{name: "Adoption vs Fund → Adoption priority", text: "Ищет дом, возможен сбор на корм", want: TypeAdoption},
+		{name: "Adoption via care markers: вакцинирована/чипирована", text: "Кошка вакцинирована и чипирована", want: TypeAdoption},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := detectType(tc.text)
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
 func sliceHasAny(hay []string, needles []string) bool {
 	set := map[string]bool{}
 	for _, v := range hay {

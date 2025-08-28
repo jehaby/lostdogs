@@ -67,13 +67,14 @@ type Extras struct {
 
 // Compiled regexes (case-insensitive where needed)
 var (
-	reSpace        = regexp.MustCompile(`\s+`)
-	reLost         = regexp.MustCompile(`(?i)(пропал[аи]?|потерял[асься]?|убежал[аи]?|сбежал[аи]?)`)
-	reFound        = regexp.MustCompile(`(?i)(найден[аоы]?|нашл[аи]|подобрал[аи])`)
-	reSighting     = regexp.MustCompile(`(?i)(замечен[ао]?|видел[аи]?|бегает|появил[асься])`)
-	reAdoption     = regexp.MustCompile(`(?i)(ищет\s+дом|в\s+добрые\s+руки|отда[ёмм]|пристраив[ае])`)
-	reCareMarkers  = regexp.MustCompile(`(?i)(стерилиз|кастрир|вакц|привит|чипир|лоток)`) // for adoption leaning
-	reFundraising  = regexp.MustCompile(`(?i)\b(сбор|оплатить|перевод|передержк|карта)\b`)
+	reSpace       = regexp.MustCompile(`\s+`)
+	reLost        = regexp.MustCompile(`(?i)(пропал[аи]?|потерял[асься]?|убежал[аи]?|сбежал[аи]?)`)
+	reFound       = regexp.MustCompile(`(?i)(найден[аоы]?|нашл[аи]|подобрал[аи])`)
+	reSighting    = regexp.MustCompile(`(?i)(замечен[ао]?|видел[аи]?|бегает|появил[асься])`)
+	reAdoption    = regexp.MustCompile(`(?i)(ищет\s+дом|в\s+добрые\s+руки|отда[ёмм]|пристраив[ае])`)
+	reCareMarkers = regexp.MustCompile(`(?i)(стерилиз|кастрир|вакц|привит|чипир|лоток)`) // for adoption leaning
+	// Use Unicode-safe boundaries: ASCII \b doesn't handle Cyrillic correctly.
+	reFundraising  = regexp.MustCompile(`(?i)(^|[^\p{L}\d])(сбор|оплатить|перевод|передержк|карта)([^\p{L}\d]|$)`)
 	reTieFoundSpec = regexp.MustCompile(`(?i)найден\S*.*(кот|собак|п[её]с|кобел|щен|живот)`) // specific found pattern
 
 	rePhone = regexp.MustCompile(`(?:(?:\+7|8)\s*\(?\d{3}\)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}|\b9\d{2}[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}\b)`)
