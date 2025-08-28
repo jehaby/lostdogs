@@ -83,8 +83,9 @@ var (
 	reVKBracket = regexp.MustCompile(`\[(id\d+)\|([^\]]+)\]`)
 
 	// Note: Go RE2 doesn't support negative lookahead; keep it simple.
-	reCat  = regexp.MustCompile(`(?i)кошк|кот\b|кот[её]н|кис[ао]ньк|бенгальск`)
-	reDog  = regexp.MustCompile(`(?i)собак|пс|п[её]с\b|п[её]сик|кобел|щен`)
+	// Avoid ASCII word-boundaries; use explicit fragments and whitespace/end checks where needed.
+	reCat  = regexp.MustCompile(`(?i)кошечк|кошк|кот\s|кот[её]н|кис[ао]ньк|бенгальск`)
+	reDog  = regexp.MustCompile(`(?i)собак|пс|п[её]с(?:\s|$)|п[её]сик|кобел|щен`)
 	reMale = regexp.MustCompile(`(?i)кобел(ё|е)к|мальчик`)
 	reFem  = regexp.MustCompile(`(?i)девочк|сука`)
 

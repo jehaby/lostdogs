@@ -228,6 +228,36 @@ func TestExtractPhones_Table(t *testing.T) {
 	}
 }
 
+func TestDetectAnimal_Table(t *testing.T) {
+	cases := []struct {
+		name string
+		text string
+		want AnimalType
+	}{
+		{name: "Cat: кошка", text: "Пропала кошка во дворе", want: AnimalCat},
+		{name: "Cat: кот", text: "Найден кот у подъезда", want: AnimalCat},
+		{name: "Cat: котёнок", text: "Потерялся котёнок, рыжий", want: AnimalCat},
+		{name: "Cat: кошечка", text: "Кошечка ищет дом", want: AnimalCat},
+		{name: "Cat: бенгальская", text: "Бенгальская красавица ждёт хозяйку", want: AnimalCat},
+
+		{name: "Dog: собака", text: "Нашли собаку возле школы", want: AnimalDog},
+		{name: "Dog: пёс", text: "Пёс бегает по району", want: AnimalDog},
+		{name: "Dog: песик", text: "Милый песик ищет дом", want: AnimalDog},
+		{name: "Dog: кобелек", text: "Кобелек йорк", want: AnimalDog},
+		{name: "Dog: щенок", text: "Щенок найден ночью", want: AnimalDog},
+
+		{name: "Unknown: neutral text", text: "Привет всем! Отличный день.", want: AnimalUnknown},
+		{name: "Unknown: avoids котейка", text: "Слово котейка не должно сработать", want: AnimalUnknown},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := detectAnimal(tc.text)
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
 func TestDetectType_Table(t *testing.T) {
 	cases := []struct {
 		name string
