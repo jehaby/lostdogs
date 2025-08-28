@@ -22,7 +22,7 @@ type wantCase struct {
 	ExtrasLitterOK   bool
 }
 
-func TestParse_Table(t *testing.T) {
+func TestParse(t *testing.T) {
 	cases := []struct {
 		name string
 		text string
@@ -205,7 +205,7 @@ func sliceHasAll(hay []string, needles []string) bool {
 	return true
 }
 
-func TestExtractPhones_Table(t *testing.T) {
+func TestExtractPhones(t *testing.T) {
 	cases := []struct {
 		name string
 		text string
@@ -228,7 +228,7 @@ func TestExtractPhones_Table(t *testing.T) {
 	}
 }
 
-func TestDetectAnimal_Table(t *testing.T) {
+func TestDetectAnimal(t *testing.T) {
 	cases := []struct {
 		name string
 		text string
@@ -258,7 +258,7 @@ func TestDetectAnimal_Table(t *testing.T) {
 	}
 }
 
-func TestDetectType_Table(t *testing.T) {
+func TestDetectType(t *testing.T) {
 	cases := []struct {
 		name string
 		text string
