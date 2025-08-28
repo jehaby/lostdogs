@@ -77,7 +77,7 @@ var (
 	reFundraising  = regexp.MustCompile(`(?i)(^|[^\p{L}\d])(сбор|оплатить|перевод|передержк|карта)([^\p{L}\d]|$)`)
 	reTieFoundSpec = regexp.MustCompile(`(?i)найден\S*.*(кот|собак|п[её]с|кобел|щен|живот)`) // specific found pattern
 
-	rePhone = regexp.MustCompile(`(?:(?:\+7|8)\s*\(?\d{3}\)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}|\b9\d{2}[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}\b)`)
+	rePhone = regexp.MustCompile(`(?:(?:\+7|8)\s*\(?\d{3}\)?[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}|\b9\d{2}[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}\b|\b7\d{10}\b)`)
 
 	reVKURL     = regexp.MustCompile(`(?i)vk\.com/\S+`)
 	reVKBracket = regexp.MustCompile(`\[(id\d+)\|([^\]]+)\]`)

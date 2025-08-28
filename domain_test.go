@@ -205,6 +205,29 @@ func sliceHasAll(hay []string, needles []string) bool {
 	return true
 }
 
+func TestExtractPhones_Table(t *testing.T) {
+	cases := []struct {
+		name string
+		text string
+		want []string
+	}{
+		{name: "+7 spaced/dashed", text: "Связь: +7 (912) 028-16-83", want: []string{"+79120281683"}},
+		{name: "8 with dashes", text: "Тел: 8-912-762-92-39", want: []string{"+79127629239"}},
+		{name: "8 with spaces", text: "📞 8912 4586329 Анна", want: []string{"+79124586329"}},
+		{name: "bare 11 starting 7", text: "Телефон: 79120216801", want: []string{"+79120216801"}},
+		{name: "mobile 10 starting 9", text: "Звоните 922 405 26 12", want: []string{"+79224052612"}},
+		{name: "normalize from 8950...", text: "пишите Юлии 89501684430", want: []string{"+79501684430"}},
+		{name: "multiple + order + dedupe", text: "Тел: 8 (912) 028-16-83, +7 912 028 16 83, 922 405 26 12", want: []string{"+79120281683", "+79224052612"}},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := extractPhones(tc.text)
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
 func TestDetectType_Table(t *testing.T) {
 	cases := []struct {
 		name string
