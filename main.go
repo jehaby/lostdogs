@@ -12,6 +12,7 @@ import (
 	"time"
 
 	vkapi "github.com/SevereCloud/vksdk/v3/api"
+	object "github.com/SevereCloud/vksdk/v3/object"
 	"github.com/caarlos0/env/v11"
 	sqldb "github.com/jehaby/lostdogs/internal/db"
 	itypes "github.com/jehaby/lostdogs/internal/types"
@@ -136,8 +137,14 @@ func (svc *service) scanGroup(ctx context.Context, g *Group) error {
 		return err
 	}
 	slog.Info("wall.get ok", "owner_id", -g.ID, "items", len(resp.Items))
-	for i := len(resp.Items) - 1; i >= 0; i-- { // oldest → newest
-		post := resp.Items[i]
+	svc.processPosts(resp.Items, g)
+	return nil
+}
+
+// processPosts processes VK posts for a group, updating seen and last timestamp.
+func (svc *service) processPosts(posts []object.WallWallpost, g *Group) {
+	for i := len(posts) - 1; i >= 0; i-- { // oldest → newest
+		post := posts[i]
 		if post.Date < int(g.LastTS) {
 			slog.Debug("skip old post", "post_id", post.ID, "date", post.Date, "last_ts", g.LastTS)
 			continue
@@ -161,7 +168,6 @@ func (svc *service) scanGroup(ctx context.Context, g *Group) error {
 			slog.Debug("last_ts updated", "old", old, "new", g.LastTS)
 		}
 	}
-	return nil
 }
 
 // scanAllGroups performs one pass over all groups with a timeout context.
