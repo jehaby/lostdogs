@@ -125,10 +125,10 @@ func resolveGroupID(vk *vkapi.VK, screen string) (int, error) {
 	return resp.ObjectID, nil
 }
 
-func scanGroup(ctx context.Context, vk *vkapi.VK, svc *service, g *Group) error {
+func (svc *service) scanGroup(ctx context.Context, g *Group) error {
 	// Get last N posts; if you need deeper history, implement offset pagination.
 	slog.Debug("wall.get request", "owner_id", -g.ID, "count", 50, "last_ts", g.LastTS)
-	resp, err := vk.WallGet(vkapi.Params{
+	resp, err := svc.vk.WallGet(vkapi.Params{
 		"owner_id": -g.ID,
 		"count":    50,
 	})
@@ -170,7 +170,7 @@ func (s *service) scanAllGroups(gs []Group) {
 	defer cancel()
 	slog.Debug("tick: scanning groups", "count", len(gs))
 	for i := range gs {
-		if err := scanGroup(ctx, s.vk, s, &gs[i]); err != nil {
+		if err := s.scanGroup(ctx, &gs[i]); err != nil {
 			slog.Error("scan group failed", "screen_name", gs[i].ScreenName, "err", err)
 		}
 		time.Sleep(500 * time.Millisecond) // rate-limit spacing
