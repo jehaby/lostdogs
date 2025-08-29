@@ -1,0 +1,4 @@
+export VK_TOKEN =
+export LOG_LEVEL = debug
+
+export GOEXPERIMENT = jsonv2
