@@ -9,15 +9,18 @@ CREATE TABLE IF NOT EXISTS posts (
   text            TEXT      NOT NULL,
   -- additional parsed/annotated data
   raw             TEXT      NOT NULL,                -- original raw content
-  type            TEXT                              DEFAULT NULL,
-  animal          TEXT                              DEFAULT NULL,
+  -- constrained enum-like fields
+  type            TEXT      NOT NULL DEFAULT 'unknown' CHECK (type IN ('unknown','lost','found','sighting','adoption','fundraising','news','link','empty')),
+  animal          TEXT      NOT NULL DEFAULT 'unknown' CHECK (animal IN ('unknown','cat','dog','other')),
+  sex             TEXT      NOT NULL DEFAULT 'unknown' CHECK (sex IN ('unknown','m','f')),
+  species         TEXT      NOT NULL DEFAULT 'unknown' CHECK (species IN ('cat','dog','bird','unknown')),
+  -- free-form/nullable annotations
   breed           TEXT                              DEFAULT NULL,
-  sex             TEXT                              DEFAULT NULL,
   age             TEXT                              DEFAULT NULL,
   name            TEXT                              DEFAULT NULL,
   location        TEXT                              DEFAULT NULL,
   "when"         TEXT                              DEFAULT NULL,
-  phones          TEXT                              DEFAULT NULL, -- JSON array string
+  phones          TEXT                              DEFAULT NULL, -- string[]
   contact_names   TEXT                              DEFAULT NULL, -- JSON array string
   vk_accounts     TEXT                              DEFAULT NULL, -- JSON array string
   status_details  TEXT                              DEFAULT NULL,

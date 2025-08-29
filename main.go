@@ -14,6 +14,7 @@ import (
 	vkapi "github.com/SevereCloud/vksdk/v3/api"
 	"github.com/caarlos0/env/v11"
 	sqldb "github.com/jehaby/lostdogs/internal/db"
+	itypes "github.com/jehaby/lostdogs/internal/types"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -36,12 +37,13 @@ type config struct {
 	VKToken           string     `env:"VK_TOKEN,required"`
 	LogLevel          slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	TGBotDebugEnabled bool       `env:"TGBOT_DEBUG_ENABLED" envDefault:"false"`
-	DBConnString      string     `env:"DB_CONN_STRING" envDefault:"file:./db/bot.db?cache=shared&mode=rwc"`
+	DBConnString      string     `env:"DB_CONN_STRING" envDefault:"file:./resources/db/lostdogs.db?cache=shared&mode=rwc"`
 }
 
 type service struct {
 	db      *sql.DB
 	queries *sqldb.Queries
+	vk      *vkapi.VK
 }
 
 func newService(cfg config) *service {
@@ -63,6 +65,13 @@ func newService(cfg config) *service {
 		os.Exit(1)
 	}
 	svc.queries = sqldb.New(svc.db)
+
+	// Initialize VK client
+	vk := vkapi.NewVK(cfg.VKToken)
+	client := &http.Client{Timeout: 10 * time.Second}
+	vk.Client = client
+	svc.vk = vk
+	slog.Info("VK client initialized", "timeout", client.Timeout)
 	return svc
 }
 
@@ -77,16 +86,11 @@ func main() {
 
 	svc := newService(cfg)
 
-	vk := vkapi.NewVK(cfg.VKToken)
-	client := &http.Client{Timeout: 10 * time.Second}
-	vk.Client = client
-	slog.Info("VK client initialized", "timeout", client.Timeout)
-
 	// 1) Resolve group IDs once
 	var gs []Group
 	slog.Info("resolving groups", "requested", len(groups))
 	for _, name := range groups {
-		id, err := resolveGroupID(vk, name)
+		id, err := resolveGroupID(svc.vk, name)
 		if err != nil {
 			slog.Error("resolve group id failed", "screen_name", name, "err", err)
 			continue
@@ -96,21 +100,16 @@ func main() {
 	}
 	slog.Info("groups ready", "count", len(gs))
 
+	// Run initial scan immediately
+	svc.scanAllGroups(gs)
+
 	ticker := time.NewTicker(30 * time.Second) // polite polling
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-			slog.Debug("tick: scanning groups", "count", len(gs))
-			for i := range gs {
-				if err := scanGroup(ctx, vk, svc, &gs[i]); err != nil {
-					slog.Error("scan group failed", "screen_name", gs[i].ScreenName, "err", err)
-				}
-				time.Sleep(500 * time.Millisecond) // rate-limit spacing
-			}
-			cancel()
+			svc.scanAllGroups(gs)
 		}
 	}
 }
@@ -152,7 +151,7 @@ func scanGroup(ctx context.Context, vk *vkapi.VK, svc *service, g *Group) error 
 		link := fmt.Sprintf("https://vk.com/wall%d_%d", post.OwnerID, post.ID)
 		slog.Info("got msg", "owner_id", post.OwnerID, "post_id", post.ID, "date", post.Date, "text", text, "link", link)
 		// Persist new message in SQLite (best-effort)
-		if err := svc.SaveMessage(post.OwnerID, post.ID, int64(post.Date), text, link, ""); err != nil {
+		if err := svc.SaveMessage(post.OwnerID, post.ID, int64(post.Date), post.Text, text, link); err != nil {
 			slog.Error("db save failed", "err", err, "owner_id", post.OwnerID, "post_id", post.ID)
 		}
 		seen[key] = struct{}{}
@@ -165,16 +164,100 @@ func scanGroup(ctx context.Context, vk *vkapi.VK, svc *service, g *Group) error 
 	return nil
 }
 
-// SaveMessage persists or updates a VK post using sqlc-generated queries.
-func (s *service) SaveMessage(ownerID int, postID int, date int64, text, link, attachments string) error {
-	// link and attachments are currently not stored; text is the normalized text.
-	// Use text as both normalized and raw until raw parsing is introduced upstream.
+// scanAllGroups performs one pass over all groups with a timeout context.
+func (s *service) scanAllGroups(gs []Group) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	slog.Debug("tick: scanning groups", "count", len(gs))
+	for i := range gs {
+		if err := scanGroup(ctx, s.vk, s, &gs[i]); err != nil {
+			slog.Error("scan group failed", "screen_name", gs[i].ScreenName, "err", err)
+		}
+		time.Sleep(500 * time.Millisecond) // rate-limit spacing
+	}
+}
+
+// SaveMessage parses raw VK text and persists it via sqlc UpsertPost.
+func (s *service) SaveMessage(ownerID int, postID int, date int64, raw, normalized, link string) error {
+	// Parse domain-level fields from raw text
+	p := Parse(postID, raw)
+
+	// Map domain enums to DB strings
+	sex := string(p.Sex)
+	if sex == "" {
+		sex = "unknown"
+	}
+	animal := string(p.Animal)
+	if animal == "" {
+		animal = "unknown"
+	}
+	ptype := string(p.Type)
+	if ptype == "" {
+		ptype = "unknown"
+	}
+	species := "unknown"
+	switch p.Animal {
+	case AnimalCat:
+		species = "cat"
+	case AnimalDog:
+		species = "dog"
+	default:
+		species = "unknown"
+	}
+
+	// Optional string pointers
+	sPtr := func(v string) *string {
+		if strings.TrimSpace(v) == "" {
+			return nil
+		}
+		return &v
+	}
+	// Optional bool -> *int64 (0/1)
+	bPtr := func(b bool) *int64 {
+		if !b {
+			return nil
+		}
+		one := int64(1)
+		return &one
+	}
+
+	// Slices -> JSON-backed StringSlice
+	var phones itypes.StringSlice
+	if len(p.Phones) > 0 {
+		phones = itypes.StringSlice(p.Phones)
+	}
+	var contactNames itypes.StringSlice
+	if len(p.ContactNames) > 0 {
+		contactNames = itypes.StringSlice(p.ContactNames)
+	}
+	var vkAccounts itypes.StringSlice
+	if len(p.VKAccounts) > 0 {
+		vkAccounts = itypes.StringSlice(p.VKAccounts)
+	}
+
 	params := sqldb.UpsertPostParams{
-		OwnerID: int64(ownerID),
-		PostID:  int64(postID),
-		Date:    date,
-		Text:    text,
-		Raw:     text,
+		OwnerID:          int64(ownerID),
+		PostID:           int64(postID),
+		Date:             date,
+		Text:             normalized,
+		Raw:              raw,
+		Type:             ptype,
+		Animal:           animal,
+		Species:          species,
+		Sex:              sex,
+		Breed:            sPtr(p.Breed),
+		Age:              sPtr(p.Age),
+		Name:             sPtr(p.Name),
+		Location:         sPtr(p.Location),
+		When:             sPtr(p.When),
+		Phones:           phones,
+		ContactNames:     contactNames,
+		VkAccounts:       vkAccounts,
+		StatusDetails:    sPtr(p.StatusDetails),
+		ExtrasSterilized: bPtr(p.Extras.Sterilized),
+		ExtrasVaccinated: bPtr(p.Extras.Vaccinated),
+		ExtrasChipped:    bPtr(p.Extras.Chipped),
+		ExtrasLitterOk:   bPtr(p.Extras.LitterOK),
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -213,14 +296,6 @@ func initLogger(level slog.Level) {
 func normalize(s string) string {
 	s = strings.ReplaceAll(s, "\u00A0", " ")
 	return strings.Join(strings.Fields(s), " ")
-}
-
-func truncate(s string, n int) string {
-	if len([]rune(s)) <= n {
-		return s
-	}
-	r := []rune(s)
-	return string(r[:n]) + "…"
 }
 
 // ----- End

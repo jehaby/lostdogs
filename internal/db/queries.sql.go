@@ -7,6 +7,8 @@ package db
 
 import (
 	"context"
+
+	"github.com/jehaby/lostdogs/internal/types"
 )
 
 const upsertPost = `-- name: UpsertPost :exec
@@ -18,6 +20,7 @@ INSERT INTO posts (
   raw,
   type,
   animal,
+  species,
   breed,
   sex,
   age,
@@ -54,7 +57,8 @@ VALUES (
   ?18,
   ?19,
   ?20,
-  ?21
+  ?21,
+  ?22
 )
 ON CONFLICT(owner_id, post_id) DO UPDATE SET
   date = excluded.date,
@@ -62,6 +66,7 @@ ON CONFLICT(owner_id, post_id) DO UPDATE SET
   raw = excluded.raw,
   type = excluded.type,
   animal = excluded.animal,
+  species = excluded.species,
   breed = excluded.breed,
   sex = excluded.sex,
   age = excluded.age,
@@ -79,27 +84,28 @@ ON CONFLICT(owner_id, post_id) DO UPDATE SET
 `
 
 type UpsertPostParams struct {
-	OwnerID          int64   `json:"owner_id"`
-	PostID           int64   `json:"post_id"`
-	Date             int64   `json:"date"`
-	Text             string  `json:"text"`
-	Raw              string  `json:"raw"`
-	Type             *string `json:"type"`
-	Animal           *string `json:"animal"`
-	Breed            *string `json:"breed"`
-	Sex              *string `json:"sex"`
-	Age              *string `json:"age"`
-	Name             *string `json:"name"`
-	Location         *string `json:"location"`
-	When             *string `json:"when"`
-	Phones           *string `json:"phones"`
-	ContactNames     *string `json:"contact_names"`
-	VkAccounts       *string `json:"vk_accounts"`
-	StatusDetails    *string `json:"status_details"`
-	ExtrasSterilized *int64  `json:"extras_sterilized"`
-	ExtrasVaccinated *int64  `json:"extras_vaccinated"`
-	ExtrasChipped    *int64  `json:"extras_chipped"`
-	ExtrasLitterOk   *int64  `json:"extras_litter_ok"`
+	OwnerID          int64             `json:"owner_id"`
+	PostID           int64             `json:"post_id"`
+	Date             int64             `json:"date"`
+	Text             string            `json:"text"`
+	Raw              string            `json:"raw"`
+	Type             string            `json:"type"`
+	Animal           string            `json:"animal"`
+	Species          string            `json:"species"`
+	Breed            *string           `json:"breed"`
+	Sex              string            `json:"sex"`
+	Age              *string           `json:"age"`
+	Name             *string           `json:"name"`
+	Location         *string           `json:"location"`
+	When             *string           `json:"when"`
+	Phones           types.StringSlice `json:"phones"`
+	ContactNames     types.StringSlice `json:"contact_names"`
+	VkAccounts       types.StringSlice `json:"vk_accounts"`
+	StatusDetails    *string           `json:"status_details"`
+	ExtrasSterilized *int64            `json:"extras_sterilized"`
+	ExtrasVaccinated *int64            `json:"extras_vaccinated"`
+	ExtrasChipped    *int64            `json:"extras_chipped"`
+	ExtrasLitterOk   *int64            `json:"extras_litter_ok"`
 }
 
 // Insert or update a post with all parsed fields
@@ -112,6 +118,7 @@ func (q *Queries) UpsertPost(ctx context.Context, arg UpsertPostParams) error {
 		arg.Raw,
 		arg.Type,
 		arg.Animal,
+		arg.Species,
 		arg.Breed,
 		arg.Sex,
 		arg.Age,
