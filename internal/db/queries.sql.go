@@ -20,21 +20,14 @@ INSERT INTO posts (
   raw,
   type,
   animal,
-  species,
-  breed,
   sex,
-  age,
   name,
   location,
   "when",
   phones,
   contact_names,
   vk_accounts,
-  status_details,
-  extras_sterilized,
-  extras_vaccinated,
-  extras_chipped,
-  extras_litter_ok
+  status_details
 )
 VALUES (
   ?1,
@@ -51,14 +44,7 @@ VALUES (
   ?12,
   ?13,
   ?14,
-  ?15,
-  ?16,
-  ?17,
-  ?18,
-  ?19,
-  ?20,
-  ?21,
-  ?22
+  ?15
 )
 ON CONFLICT(owner_id, post_id) DO UPDATE SET
   date = excluded.date,
@@ -66,46 +52,32 @@ ON CONFLICT(owner_id, post_id) DO UPDATE SET
   raw = excluded.raw,
   type = excluded.type,
   animal = excluded.animal,
-  species = excluded.species,
-  breed = excluded.breed,
   sex = excluded.sex,
-  age = excluded.age,
   name = excluded.name,
   location = excluded.location,
   "when" = excluded."when",
   phones = excluded.phones,
   contact_names = excluded.contact_names,
   vk_accounts = excluded.vk_accounts,
-  status_details = excluded.status_details,
-  extras_sterilized = excluded.extras_sterilized,
-  extras_vaccinated = excluded.extras_vaccinated,
-  extras_chipped = excluded.extras_chipped,
-  extras_litter_ok = excluded.extras_litter_ok
+  status_details = excluded.status_details
 `
 
 type UpsertPostParams struct {
-	OwnerID          int64             `json:"owner_id"`
-	PostID           int64             `json:"post_id"`
-	Date             int64             `json:"date"`
-	Text             string            `json:"text"`
-	Raw              string            `json:"raw"`
-	Type             string            `json:"type"`
-	Animal           string            `json:"animal"`
-	Species          string            `json:"species"`
-	Breed            *string           `json:"breed"`
-	Sex              string            `json:"sex"`
-	Age              *string           `json:"age"`
-	Name             *string           `json:"name"`
-	Location         *string           `json:"location"`
-	When             *string           `json:"when"`
-	Phones           types.StringSlice `json:"phones"`
-	ContactNames     types.StringSlice `json:"contact_names"`
-	VkAccounts       types.StringSlice `json:"vk_accounts"`
-	StatusDetails    *string           `json:"status_details"`
-	ExtrasSterilized *int64            `json:"extras_sterilized"`
-	ExtrasVaccinated *int64            `json:"extras_vaccinated"`
-	ExtrasChipped    *int64            `json:"extras_chipped"`
-	ExtrasLitterOk   *int64            `json:"extras_litter_ok"`
+	OwnerID       int64             `json:"owner_id"`
+	PostID        int64             `json:"post_id"`
+	Date          int64             `json:"date"`
+	Text          string            `json:"text"`
+	Raw           string            `json:"raw"`
+	Type          string            `json:"type"`
+	Animal        string            `json:"animal"`
+	Sex           string            `json:"sex"`
+	Name          *string           `json:"name"`
+	Location      *string           `json:"location"`
+	When          *string           `json:"when"`
+	Phones        types.StringSlice `json:"phones"`
+	ContactNames  types.StringSlice `json:"contact_names"`
+	VkAccounts    types.StringSlice `json:"vk_accounts"`
+	StatusDetails *string           `json:"status_details"`
 }
 
 // Insert or update a post with all parsed fields
@@ -118,10 +90,7 @@ func (q *Queries) UpsertPost(ctx context.Context, arg UpsertPostParams) error {
 		arg.Raw,
 		arg.Type,
 		arg.Animal,
-		arg.Species,
-		arg.Breed,
 		arg.Sex,
-		arg.Age,
 		arg.Name,
 		arg.Location,
 		arg.When,
@@ -129,10 +98,6 @@ func (q *Queries) UpsertPost(ctx context.Context, arg UpsertPostParams) error {
 		arg.ContactNames,
 		arg.VkAccounts,
 		arg.StatusDetails,
-		arg.ExtrasSterilized,
-		arg.ExtrasVaccinated,
-		arg.ExtrasChipped,
-		arg.ExtrasLitterOk,
 	)
 	return err
 }

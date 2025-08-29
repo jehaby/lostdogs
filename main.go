@@ -195,30 +195,12 @@ func (s *service) SaveMessage(ownerID int, postID int, date int64, raw, normaliz
 	if ptype == "" {
 		ptype = "unknown"
 	}
-	species := "unknown"
-	switch p.Animal {
-	case AnimalCat:
-		species = "cat"
-	case AnimalDog:
-		species = "dog"
-	default:
-		species = "unknown"
-	}
-
 	// Optional string pointers
 	sPtr := func(v string) *string {
 		if strings.TrimSpace(v) == "" {
 			return nil
 		}
 		return &v
-	}
-	// Optional bool -> *int64 (0/1)
-	bPtr := func(b bool) *int64 {
-		if !b {
-			return nil
-		}
-		one := int64(1)
-		return &one
 	}
 
 	// Slices -> JSON-backed StringSlice
@@ -236,28 +218,21 @@ func (s *service) SaveMessage(ownerID int, postID int, date int64, raw, normaliz
 	}
 
 	params := sqldb.UpsertPostParams{
-		OwnerID:          int64(ownerID),
-		PostID:           int64(postID),
-		Date:             date,
-		Text:             normalized,
-		Raw:              raw,
-		Type:             ptype,
-		Animal:           animal,
-		Species:          species,
-		Sex:              sex,
-		Breed:            sPtr(p.Breed),
-		Age:              sPtr(p.Age),
-		Name:             sPtr(p.Name),
-		Location:         sPtr(p.Location),
-		When:             sPtr(p.When),
-		Phones:           phones,
-		ContactNames:     contactNames,
-		VkAccounts:       vkAccounts,
-		StatusDetails:    sPtr(p.StatusDetails),
-		ExtrasSterilized: bPtr(p.Extras.Sterilized),
-		ExtrasVaccinated: bPtr(p.Extras.Vaccinated),
-		ExtrasChipped:    bPtr(p.Extras.Chipped),
-		ExtrasLitterOk:   bPtr(p.Extras.LitterOK),
+		OwnerID:       int64(ownerID),
+		PostID:        int64(postID),
+		Date:          date,
+		Text:          normalized,
+		Raw:           raw,
+		Type:          ptype,
+		Animal:        animal,
+		Sex:           sex,
+		Name:          sPtr(p.Name),
+		Location:      sPtr(p.Location),
+		When:          sPtr(p.When),
+		Phones:        phones,
+		ContactNames:  contactNames,
+		VkAccounts:    vkAccounts,
+		StatusDetails: sPtr(p.StatusDetails),
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()

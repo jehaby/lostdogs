@@ -11,27 +11,20 @@ import (
 )
 
 type Post struct {
-	OwnerID          int64             `json:"owner_id"`
-	PostID           int64             `json:"post_id"`
-	Date             int64             `json:"date"`
-	Text             string            `json:"text"`
-	Raw              string            `json:"raw"`
-	Type             string            `json:"type"`
-	Animal           string            `json:"animal"`
-	Sex              string            `json:"sex"`
-	Species          string            `json:"species"`
-	Breed            *string           `json:"breed"`
-	Age              *string           `json:"age"`
-	Name             *string           `json:"name"`
-	Location         *string           `json:"location"`
-	When             *string           `json:"when"`
-	Phones           types.StringSlice `json:"phones"`
-	ContactNames     types.StringSlice `json:"contact_names"`
-	VkAccounts       types.StringSlice `json:"vk_accounts"`
-	StatusDetails    *string           `json:"status_details"`
-	ExtrasSterilized *int64            `json:"extras_sterilized"`
-	ExtrasVaccinated *int64            `json:"extras_vaccinated"`
-	ExtrasChipped    *int64            `json:"extras_chipped"`
-	ExtrasLitterOk   *int64            `json:"extras_litter_ok"`
-	CreatedAt        time.Time         `json:"created_at"`
+	OwnerID       int64             `json:"owner_id"`
+	PostID        int64             `json:"post_id"`
+	Date          int64             `json:"date"`
+	Text          string            `json:"text"`
+	Raw           string            `json:"raw"`
+	Type          string            `json:"type"`
+	Animal        string            `json:"animal"`
+	Sex           string            `json:"sex"`
+	Name          *string           `json:"name"`
+	Location      *string           `json:"location"`
+	When          *string           `json:"when"`
+	Phones        types.StringSlice `json:"phones"`
+	ContactNames  types.StringSlice `json:"contact_names"`
+	VkAccounts    types.StringSlice `json:"vk_accounts"`
+	StatusDetails *string           `json:"status_details"`
+	CreatedAt     time.Time         `json:"created_at"`
 }

@@ -8,21 +8,14 @@ INSERT INTO posts (
   raw,
   type,
   animal,
-  species,
-  breed,
   sex,
-  age,
   name,
   location,
   "when",
   phones,
   contact_names,
   vk_accounts,
-  status_details,
-  extras_sterilized,
-  extras_vaccinated,
-  extras_chipped,
-  extras_litter_ok
+  status_details
 )
 VALUES (
   @owner_id,
@@ -32,21 +25,14 @@ VALUES (
   @raw,
   @type,
   @animal,
-  @species,
-  @breed,
   @sex,
-  @age,
   @name,
   @location,
   @when,
   @phones,
   @contact_names,
   @vk_accounts,
-  @status_details,
-  @extras_sterilized,
-  @extras_vaccinated,
-  @extras_chipped,
-  @extras_litter_ok
+  @status_details
 )
 ON CONFLICT(owner_id, post_id) DO UPDATE SET
   date = excluded.date,
@@ -54,18 +40,11 @@ ON CONFLICT(owner_id, post_id) DO UPDATE SET
   raw = excluded.raw,
   type = excluded.type,
   animal = excluded.animal,
-  species = excluded.species,
-  breed = excluded.breed,
   sex = excluded.sex,
-  age = excluded.age,
   name = excluded.name,
   location = excluded.location,
   "when" = excluded."when",
   phones = excluded.phones,
   contact_names = excluded.contact_names,
   vk_accounts = excluded.vk_accounts,
-  status_details = excluded.status_details,
-  extras_sterilized = excluded.extras_sterilized,
-  extras_vaccinated = excluded.extras_vaccinated,
-  extras_chipped = excluded.extras_chipped,
-  extras_litter_ok = excluded.extras_litter_ok;
+  status_details = excluded.status_details;
