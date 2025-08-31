@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS posts (
   phones          TEXT                              DEFAULT NULL, -- string[]
   contact_names   TEXT                              DEFAULT NULL, -- JSON array string
   vk_accounts     TEXT                              DEFAULT NULL, -- JSON array string
+  photos          TEXT                              DEFAULT NULL, -- JSON array string (URLs)
   status_details  TEXT                              DEFAULT NULL,
   created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (owner_id, post_id)

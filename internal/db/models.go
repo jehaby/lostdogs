@@ -25,6 +25,7 @@ type Post struct {
 	Phones        types.StringSlice `json:"phones"`
 	ContactNames  types.StringSlice `json:"contact_names"`
 	VkAccounts    types.StringSlice `json:"vk_accounts"`
+	Photos        types.StringSlice `json:"photos"`
 	StatusDetails *string           `json:"status_details"`
 	CreatedAt     time.Time         `json:"created_at"`
 }

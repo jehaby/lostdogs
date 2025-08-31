@@ -15,6 +15,7 @@ INSERT INTO posts (
   phones,
   contact_names,
   vk_accounts,
+  photos,
   status_details
 )
 VALUES (
@@ -32,6 +33,7 @@ VALUES (
   @phones,
   @contact_names,
   @vk_accounts,
+  @photos,
   @status_details
 )
 ON CONFLICT(owner_id, post_id) DO UPDATE SET
@@ -47,6 +49,7 @@ ON CONFLICT(owner_id, post_id) DO UPDATE SET
   phones = excluded.phones,
   contact_names = excluded.contact_names,
   vk_accounts = excluded.vk_accounts,
+  photos = excluded.photos,
   status_details = excluded.status_details;
 
 -- name: ExistsPost :one

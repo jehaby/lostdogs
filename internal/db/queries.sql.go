@@ -45,6 +45,7 @@ INSERT INTO posts (
   phones,
   contact_names,
   vk_accounts,
+  photos,
   status_details
 )
 VALUES (
@@ -62,7 +63,8 @@ VALUES (
   ?12,
   ?13,
   ?14,
-  ?15
+  ?15,
+  ?16
 )
 ON CONFLICT(owner_id, post_id) DO UPDATE SET
   date = excluded.date,
@@ -77,6 +79,7 @@ ON CONFLICT(owner_id, post_id) DO UPDATE SET
   phones = excluded.phones,
   contact_names = excluded.contact_names,
   vk_accounts = excluded.vk_accounts,
+  photos = excluded.photos,
   status_details = excluded.status_details
 `
 
@@ -95,6 +98,7 @@ type UpsertPostParams struct {
 	Phones        types.StringSlice `json:"phones"`
 	ContactNames  types.StringSlice `json:"contact_names"`
 	VkAccounts    types.StringSlice `json:"vk_accounts"`
+	Photos        types.StringSlice `json:"photos"`
 	StatusDetails *string           `json:"status_details"`
 }
 
@@ -115,6 +119,7 @@ func (q *Queries) UpsertPost(ctx context.Context, arg UpsertPostParams) error {
 		arg.Phones,
 		arg.ContactNames,
 		arg.VkAccounts,
+		arg.Photos,
 		arg.StatusDetails,
 	)
 	return err

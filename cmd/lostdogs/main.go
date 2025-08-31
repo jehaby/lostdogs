@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -157,9 +158,23 @@ func (svc *service) processPosts(ctx context.Context, posts []object.WallWallpos
 		}
 		text := normalize(post.Text)
 		link := fmt.Sprintf("https://vk.com/wall%d_%d", post.OwnerID, post.ID)
+		// collect photo URLs (including copy_history)
+		var photos []string
+		phTmp := post.Attachments
+		for _, cp := range post.CopyHistory {
+			phTmp = slices.Concat(phTmp, cp.Attachments)
+		}
+		for _, att := range phTmp {
+			if att.Type == "photo" && att.Photo.ID != 0 {
+				sz := att.Photo.MaxSize()
+				if sz.URL != "" {
+					photos = append(photos, sz.URL)
+				}
+			}
+		}
 		slog.Info("got msg", "owner_id", post.OwnerID, "post_id", post.ID, "date", post.Date, "text", text, "link", link)
 		// Persist new message in SQLite (best-effort)
-		if err := svc.SaveMessage(post.OwnerID, post.ID, int64(post.Date), post.Text, text, link); err != nil {
+		if err := svc.SaveMessage(post.OwnerID, post.ID, int64(post.Date), post.Text, text, link, photos); err != nil {
 			slog.Error("db save failed", "err", err, "owner_id", post.OwnerID, "post_id", post.ID)
 		}
 		if post.Date > int(g.LastTS) {
@@ -184,7 +199,7 @@ func (s *service) scanAllGroups(gs []Group) {
 }
 
 // SaveMessage parses raw VK text and persists it via sqlc UpsertPost.
-func (s *service) SaveMessage(ownerID int, postID int, date int64, raw, normalized, link string) error {
+func (s *service) SaveMessage(ownerID int, postID int, date int64, raw, normalized, link string, photos []string) error {
 	// Parse domain-level fields from raw text
 	p := lostdogs.Parse(postID, raw)
 
@@ -222,6 +237,10 @@ func (s *service) SaveMessage(ownerID int, postID int, date int64, raw, normaliz
 	if len(p.VKAccounts) > 0 {
 		vkAccounts = itypes.StringSlice(p.VKAccounts)
 	}
+	var photoURLs itypes.StringSlice
+	if len(photos) > 0 {
+		photoURLs = itypes.StringSlice(photos)
+	}
 
 	params := sqldb.UpsertPostParams{
 		OwnerID:       int64(ownerID),
@@ -238,6 +257,7 @@ func (s *service) SaveMessage(ownerID int, postID int, date int64, raw, normaliz
 		Phones:        phones,
 		ContactNames:  contactNames,
 		VkAccounts:    vkAccounts,
+		Photos:        photoURLs,
 		StatusDetails: sPtr(p.StatusDetails),
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)

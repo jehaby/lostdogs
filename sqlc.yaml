@@ -26,3 +26,7 @@ sql:
             go_type:
               import: github.com/jehaby/lostdogs/internal/types
               type: StringSlice
+          - column: posts.photos
+            go_type:
+              import: github.com/jehaby/lostdogs/internal/types
+              type: StringSlice
