@@ -9,7 +9,6 @@ dist/
 *.test
 *.out
 coverage.out
-lostdogs
 
 # Go workspace files
 go.work
