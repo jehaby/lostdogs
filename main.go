@@ -29,11 +29,6 @@ var groups = []string{
 	"zoopoisk_18",
 }
 
-var (
-	// payload dedupe: memory map; use sqlite/redis in prod
-	seen = make(map[string]struct{})
-)
-
 type config struct {
 	VKToken           string     `env:"VK_TOKEN,required"`
 	LogLevel          slog.Level `env:"LOG_LEVEL" envDefault:"info"`
@@ -137,21 +132,26 @@ func (svc *service) scanGroup(ctx context.Context, g *Group) error {
 		return err
 	}
 	slog.Info("wall.get ok", "owner_id", -g.ID, "items", len(resp.Items))
-	svc.processPosts(resp.Items, g)
+	svc.processPosts(ctx, resp.Items, g)
 	return nil
 }
 
-// processPosts processes VK posts for a group, updating seen and last timestamp.
-func (svc *service) processPosts(posts []object.WallWallpost, g *Group) {
+// processPosts processes VK posts for a group, updating last timestamp and
+// skipping posts already present in SQLite.
+func (svc *service) processPosts(ctx context.Context, posts []object.WallWallpost, g *Group) {
 	for i := len(posts) - 1; i >= 0; i-- { // oldest → newest
 		post := posts[i]
 		if post.Date < int(g.LastTS) {
 			slog.Debug("skip old post", "post_id", post.ID, "date", post.Date, "last_ts", g.LastTS)
 			continue
 		}
-		key := fmt.Sprintf("%d_%d", post.OwnerID, post.ID)
-		if _, ok := seen[key]; ok {
-			slog.Debug("skip seen post", "key", key)
+		// Skip if already saved in DB (persistent dedupe)
+		n, err := svc.queries.ExistsPost(ctx, sqldb.ExistsPostParams{OwnerID: int64(post.OwnerID), PostID: int64(post.ID)})
+		if err != nil {
+			slog.Error("exists check failed", "owner_id", post.OwnerID, "post_id", post.ID, "err", err)
+			// best-effort: continue as new to avoid missing data
+		} else if n > 0 {
+			slog.Debug("skip seen post (db)", "owner_id", post.OwnerID, "post_id", post.ID)
 			continue
 		}
 		text := normalize(post.Text)
@@ -161,7 +161,6 @@ func (svc *service) processPosts(posts []object.WallWallpost, g *Group) {
 		if err := svc.SaveMessage(post.OwnerID, post.ID, int64(post.Date), post.Text, text, link); err != nil {
 			slog.Error("db save failed", "err", err, "owner_id", post.OwnerID, "post_id", post.ID)
 		}
-		seen[key] = struct{}{}
 		if post.Date > int(g.LastTS) {
 			old := g.LastTS
 			g.LastTS = int64(post.Date)

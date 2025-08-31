@@ -11,6 +11,24 @@ import (
 	"github.com/jehaby/lostdogs/internal/types"
 )
 
+const existsPost = `-- name: ExistsPost :one
+SELECT EXISTS(
+  SELECT 1 FROM posts WHERE owner_id = ?1 AND post_id = ?2
+)
+`
+
+type ExistsPostParams struct {
+	OwnerID int64 `json:"owner_id"`
+	PostID  int64 `json:"post_id"`
+}
+
+func (q *Queries) ExistsPost(ctx context.Context, arg ExistsPostParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, existsPost, arg.OwnerID, arg.PostID)
+	var column_1 int64
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const upsertPost = `-- name: UpsertPost :exec
 INSERT INTO posts (
   owner_id,

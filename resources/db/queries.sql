@@ -48,3 +48,8 @@ ON CONFLICT(owner_id, post_id) DO UPDATE SET
   contact_names = excluded.contact_names,
   vk_accounts = excluded.vk_accounts,
   status_details = excluded.status_details;
+
+-- name: ExistsPost :one
+SELECT EXISTS(
+  SELECT 1 FROM posts WHERE owner_id = ?1 AND post_id = ?2
+);
