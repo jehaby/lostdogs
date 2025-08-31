@@ -10,6 +10,19 @@ import (
 	"github.com/jehaby/lostdogs/internal/types"
 )
 
+type Outbox struct {
+	ID          int64     `json:"id"`
+	OwnerID     int64     `json:"owner_id"`
+	PostID      int64     `json:"post_id"`
+	Status      string    `json:"status"`
+	Retries     int64     `json:"retries"`
+	LastError   *string   `json:"last_error"`
+	TgMessageID *int64    `json:"tg_message_id"`
+	LeasedUntil *int64    `json:"leased_until"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 type Post struct {
 	OwnerID       int64             `json:"owner_id"`
 	PostID        int64             `json:"post_id"`

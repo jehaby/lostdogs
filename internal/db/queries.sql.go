@@ -7,9 +7,49 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/jehaby/lostdogs/internal/types"
 )
+
+const claimPendingMark = `-- name: ClaimPendingMark :exec
+UPDATE outbox
+SET status='sending', leased_until=?1, updated_at=CURRENT_TIMESTAMP
+WHERE id IN (
+  SELECT id FROM outbox
+  WHERE status='pending' AND (leased_until IS NULL OR leased_until < strftime('%s','now'))
+  ORDER BY created_at ASC
+  LIMIT ?2
+)
+`
+
+type ClaimPendingMarkParams struct {
+	Lease *int64 `json:"lease"`
+	Limit int64  `json:"limit"`
+}
+
+func (q *Queries) ClaimPendingMark(ctx context.Context, arg ClaimPendingMarkParams) error {
+	_, err := q.db.ExecContext(ctx, claimPendingMark, arg.Lease, arg.Limit)
+	return err
+}
+
+const enqueueOutbox = `-- name: EnqueueOutbox :exec
+
+INSERT INTO outbox (owner_id, post_id)
+VALUES (?1, ?2)
+ON CONFLICT(owner_id, post_id) DO NOTHING
+`
+
+type EnqueueOutboxParams struct {
+	OwnerID int64 `json:"owner_id"`
+	PostID  int64 `json:"post_id"`
+}
+
+// Outbox queries
+func (q *Queries) EnqueueOutbox(ctx context.Context, arg EnqueueOutboxParams) error {
+	_, err := q.db.ExecContext(ctx, enqueueOutbox, arg.OwnerID, arg.PostID)
+	return err
+}
 
 const existsPost = `-- name: ExistsPost :one
 SELECT EXISTS(
@@ -27,6 +67,145 @@ func (q *Queries) ExistsPost(ctx context.Context, arg ExistsPostParams) (int64, 
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
+}
+
+const getPost = `-- name: GetPost :one
+SELECT owner_id, post_id, date, text, raw, type, animal, sex, name, location, "when",
+       phones, contact_names, vk_accounts, status_details, created_at
+FROM posts
+WHERE owner_id = ?1 AND post_id = ?2
+`
+
+type GetPostParams struct {
+	OwnerID int64 `json:"owner_id"`
+	PostID  int64 `json:"post_id"`
+}
+
+type GetPostRow struct {
+	OwnerID       int64             `json:"owner_id"`
+	PostID        int64             `json:"post_id"`
+	Date          int64             `json:"date"`
+	Text          string            `json:"text"`
+	Raw           string            `json:"raw"`
+	Type          string            `json:"type"`
+	Animal        string            `json:"animal"`
+	Sex           string            `json:"sex"`
+	Name          *string           `json:"name"`
+	Location      *string           `json:"location"`
+	When          *string           `json:"when"`
+	Phones        types.StringSlice `json:"phones"`
+	ContactNames  types.StringSlice `json:"contact_names"`
+	VkAccounts    types.StringSlice `json:"vk_accounts"`
+	StatusDetails *string           `json:"status_details"`
+	CreatedAt     time.Time         `json:"created_at"`
+}
+
+func (q *Queries) GetPost(ctx context.Context, arg GetPostParams) (GetPostRow, error) {
+	row := q.db.QueryRowContext(ctx, getPost, arg.OwnerID, arg.PostID)
+	var i GetPostRow
+	err := row.Scan(
+		&i.OwnerID,
+		&i.PostID,
+		&i.Date,
+		&i.Text,
+		&i.Raw,
+		&i.Type,
+		&i.Animal,
+		&i.Sex,
+		&i.Name,
+		&i.Location,
+		&i.When,
+		&i.Phones,
+		&i.ContactNames,
+		&i.VkAccounts,
+		&i.StatusDetails,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const listSendingByLease = `-- name: ListSendingByLease :many
+SELECT id, owner_id, post_id
+FROM outbox
+WHERE status='sending' AND leased_until=?1
+ORDER BY created_at ASC
+`
+
+type ListSendingByLeaseRow struct {
+	ID      int64 `json:"id"`
+	OwnerID int64 `json:"owner_id"`
+	PostID  int64 `json:"post_id"`
+}
+
+func (q *Queries) ListSendingByLease(ctx context.Context, lease *int64) ([]ListSendingByLeaseRow, error) {
+	rows, err := q.db.QueryContext(ctx, listSendingByLease, lease)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListSendingByLeaseRow
+	for rows.Next() {
+		var i ListSendingByLeaseRow
+		if err := rows.Scan(&i.ID, &i.OwnerID, &i.PostID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const markFailed = `-- name: MarkFailed :exec
+UPDATE outbox
+SET status=CASE WHEN retries+1>=?1 THEN 'failed' ELSE 'pending' END,
+    retries=retries+1,
+    last_error=?2,
+    leased_until=NULL,
+    updated_at=CURRENT_TIMESTAMP
+WHERE id=?3
+`
+
+type MarkFailedParams struct {
+	MaxRetries int64   `json:"max_retries"`
+	LastError  *string `json:"last_error"`
+	ID         int64   `json:"id"`
+}
+
+func (q *Queries) MarkFailed(ctx context.Context, arg MarkFailedParams) error {
+	_, err := q.db.ExecContext(ctx, markFailed, arg.MaxRetries, arg.LastError, arg.ID)
+	return err
+}
+
+const markSent = `-- name: MarkSent :exec
+UPDATE outbox
+SET status='sent', tg_message_id=?1, updated_at=CURRENT_TIMESTAMP
+WHERE id=?2
+`
+
+type MarkSentParams struct {
+	TgMessageID *int64 `json:"tg_message_id"`
+	ID          int64  `json:"id"`
+}
+
+func (q *Queries) MarkSent(ctx context.Context, arg MarkSentParams) error {
+	_, err := q.db.ExecContext(ctx, markSent, arg.TgMessageID, arg.ID)
+	return err
+}
+
+const reapStale = `-- name: ReapStale :exec
+UPDATE outbox
+SET status='pending', leased_until=NULL, updated_at=CURRENT_TIMESTAMP
+WHERE status='sending' AND leased_until < strftime('%s','now')
+`
+
+func (q *Queries) ReapStale(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, reapStale)
+	return err
 }
 
 const upsertPost = `-- name: UpsertPost :exec

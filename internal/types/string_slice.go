@@ -1,9 +1,9 @@
 package types
 
 import (
-    "database/sql/driver"
-    "encoding/json"
-    "fmt"
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
 )
 
 // StringSlice stores a JSON array in a TEXT column.

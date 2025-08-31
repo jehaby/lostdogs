@@ -17,6 +17,7 @@ import (
 	"github.com/caarlos0/env/v11"
 	"github.com/jehaby/lostdogs"
 	sqldb "github.com/jehaby/lostdogs/internal/db"
+	tele "github.com/jehaby/lostdogs/internal/telegram"
 	itypes "github.com/jehaby/lostdogs/internal/types"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -36,6 +37,9 @@ type config struct {
 	LogLevel          slog.Level `env:"LOG_LEVEL" envDefault:"info"`
 	TGBotDebugEnabled bool       `env:"TGBOT_DEBUG_ENABLED" envDefault:"false"`
 	DBConnString      string     `env:"DB_CONN_STRING" envDefault:"file:./resources/db/lostdogs.db?cache=shared&mode=rwc"`
+	TGEnabled         bool       `env:"TG_ENABLED" envDefault:"false"`
+	TGToken           string     `env:"TG_TOKEN"`
+	TGChat            int64      `env:"TG_CHAT"`
 }
 
 type service struct {
@@ -83,6 +87,13 @@ func main() {
 	initLogger(cfg.LogLevel)
 
 	svc := newService(cfg)
+
+	// Optionally start Telegram worker
+	if cfg.TGEnabled {
+		if err := telegramStart(svc, cfg); err != nil {
+			slog.Error("telegram start failed", "err", err)
+		}
+	}
 
 	// 1) Resolve group IDs once
 	var gs []Group
@@ -262,7 +273,14 @@ func (s *service) SaveMessage(ownerID int, postID int, date int64, raw, normaliz
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	return s.queries.UpsertPost(ctx, params)
+	if err := s.queries.UpsertPost(ctx, params); err != nil {
+		return err
+	}
+	// Enqueue to Telegram outbox for matching posts (e.g., lost)
+	if err := tele.EnqueueIfMatch(ctx, s.queries, sqldb.EnqueueOutboxParams{OwnerID: int64(ownerID), PostID: int64(postID)}, p); err != nil {
+		slog.Error("telegram enqueue failed", "err", err, "owner_id", ownerID, "post_id", postID)
+	}
+	return nil
 }
 
 func applySchemaFile(db *sql.DB, schemaPath string) error {

@@ -27,3 +27,21 @@ CREATE TABLE IF NOT EXISTS posts (
 );
 
 CREATE INDEX IF NOT EXISTS idx_posts_date ON posts(date);
+
+-- Outbox for Telegram delivery
+CREATE TABLE IF NOT EXISTS outbox (
+  id             INTEGER     PRIMARY KEY AUTOINCREMENT,
+  owner_id       INTEGER     NOT NULL,
+  post_id        INTEGER     NOT NULL,
+  status         TEXT        NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','sending','sent','failed')),
+  retries        INTEGER     NOT NULL DEFAULT 0,
+  last_error     TEXT,
+  tg_message_id  INTEGER,
+  leased_until   INTEGER, -- unix seconds
+  created_at     TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at     TIMESTAMP   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(owner_id, post_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_outbox_status_created_at ON outbox(status, created_at);
+CREATE INDEX IF NOT EXISTS idx_outbox_lease ON outbox(status, leased_until);
