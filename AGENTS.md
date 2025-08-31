@@ -68,13 +68,3 @@ use this dependencies for corresponding functionality (update to latest versions
 	// github.com/go-telegram/bot v1.15.0
 	// github.com/goccy/go-yaml v1.17.1
 	// github.com/mattn/go-sqlite3 v1.14.28
-
-### JSON
-
-- Use: import `encoding/json/v2` in all code.
-- Toolchain: requires `GOEXPERIMENT=jsonv2` or a toolchain with v2 enabled.
-- Basics: use `json.Marshal`/`json.Unmarshal` as usual.
-- Strict external input: `(json.UnmarshalOptions{RejectUnknownFields: true}).Unmarshal(data, &v)`.
-- Defaults: allow unknown fields otherwise; avoid v1-only APIs (e.g., `Decoder.UseNumber`).
-- Do: use option structs for strictness; keep a single JSON package per package.
-- Don’t: import `encoding/json`; mix v1 and v2; silently discard unknown fields where correctness matters.
