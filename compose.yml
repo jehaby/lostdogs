@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   lostdogs:
     image: ${IMAGE:-jehaby/lostdogs:latest}
@@ -15,3 +14,6 @@ services:
       - DB_CONN_STRING=${DB_CONN_STRING:-file:/data/lostdogs.db?cache=shared&mode=rwc}
     volumes:
       - ${DB_VOLUME_NAME:-lostdogs_db_data}:${DB_DIR_IN_CONTAINER:-/data}
+
+volumes:
+  lostdogs_db_data: {}
