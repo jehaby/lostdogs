@@ -4,7 +4,7 @@ services:
     container_name: ${CONTAINER_NAME:-lostdogs}
     restart: unless-stopped
     working_dir: /app
-    entrypoint: ["/app/lostdogs"]
+    entrypoint: [ "/app/lostdogs" ]
     environment:
       - VK_TOKEN=${VK_TOKEN}
       - TG_TOKEN=${TG_TOKEN}
@@ -13,6 +13,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - DB_CONN_STRING=${DB_CONN_STRING:-file:/data/lostdogs.db?cache=shared&mode=rwc}
     volumes:
+      - ./config.yml:/app/config.yml:ro
       - ${DB_VOLUME_NAME:-lostdogs_db_data}:${DB_DIR_IN_CONTAINER:-/data}
 
 volumes:
