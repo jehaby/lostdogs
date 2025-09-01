@@ -1,0 +1,17 @@
+version: "3.9"
+services:
+  lostdogs:
+    image: ${IMAGE:-jehaby/lostdogs:latest}
+    container_name: ${CONTAINER_NAME:-lostdogs}
+    restart: unless-stopped
+    working_dir: /app
+    entrypoint: ["/app/lostdogs"]
+    environment:
+      - VK_TOKEN=${VK_TOKEN}
+      - TG_TOKEN=${TG_TOKEN}
+      - TG_CHAT=${TG_CHAT}
+      - TG_ENABLED=${TG_ENABLED:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - DB_CONN_STRING=${DB_CONN_STRING:-file:/data/lostdogs.db?cache=shared&mode=rwc}
+    volumes:
+      - ${DB_VOLUME_NAME:-lostdogs_db_data}:${DB_DIR_IN_CONTAINER:-/data}

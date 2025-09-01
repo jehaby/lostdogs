@@ -1,0 +1,28 @@
+# Git and VCS
+.git
+.gitignore
+
+# Binaries and build artifacts
+bin/
+dist/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go build cache
+**/*.test
+
+# Local env/config
+.envrc
+.envrc.example
+*.env
+config.local.*
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*.DS_Store
+
