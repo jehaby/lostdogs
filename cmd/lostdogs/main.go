@@ -15,6 +15,7 @@ import (
 	vkapi "github.com/SevereCloud/vksdk/v3/api"
 	object "github.com/SevereCloud/vksdk/v3/object"
 	"github.com/caarlos0/env/v11"
+	yaml "github.com/goccy/go-yaml"
 	"github.com/jehaby/lostdogs"
 	sqldb "github.com/jehaby/lostdogs/internal/db"
 	tele "github.com/jehaby/lostdogs/internal/telegram"
@@ -26,10 +27,6 @@ type Group struct {
 	ScreenName string
 	ID         int // numeric id (positive). owner_id will be -ID
 	LastTS     int64
-}
-
-var groups = []string{
-	"zoopoisk_18",
 }
 
 type config struct {
@@ -95,6 +92,9 @@ func main() {
 		}
 	}
 
+	var groups []string
+	groups = loadGroupsFromYAML()
+
 	// 1) Resolve group IDs once
 	var gs []Group
 	slog.Info("resolving groups", "requested", len(groups))
@@ -121,6 +121,35 @@ func main() {
 			svc.scanAllGroups(gs)
 		}
 	}
+}
+
+// loadGroupsFromYAML loads group screen names from config YAML (config.yaml/config.yml)
+func loadGroupsFromYAML() []string {
+	candidates := []string{"config.yaml", "config.yml"}
+	for _, p := range candidates {
+		if _, err := os.Stat(p); err == nil {
+			b, err := os.ReadFile(p)
+			if err != nil {
+				slog.Error("read config failed", "path", p, "err", err)
+				continue
+			}
+			var fc struct {
+				VKGroups []string `yaml:"vk-groups"`
+			}
+			if err := yaml.Unmarshal(b, &fc); err != nil {
+				slog.Error("yaml unmarshal failed", "path", p, "err", err)
+				continue
+			}
+			if len(fc.VKGroups) == 0 {
+				slog.Warn("yaml has no vk-groups", "path", p)
+			} else {
+				slog.Info("loaded groups from yaml", "path", p, "count", len(fc.VKGroups))
+			}
+			return fc.VKGroups
+		}
+	}
+	slog.Warn("no config yaml found", "candidates", candidates)
+	return nil
 }
 
 func resolveGroupID(vk *vkapi.VK, screen string) (int, error) {

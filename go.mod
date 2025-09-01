@@ -6,6 +6,7 @@ require (
 	github.com/SevereCloud/vksdk/v3 v3.2.0
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/go-telegram/bot v1.15.0
+	github.com/goccy/go-yaml v1.17.1
 	github.com/mattn/go-sqlite3 v1.14.28
 	github.com/stretchr/testify v1.10.0
 )
