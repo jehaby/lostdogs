@@ -173,7 +173,7 @@ func (svc *service) scanGroup(ctx context.Context, g *Group) error {
 	if err != nil {
 		return err
 	}
-	slog.Info("wall.get ok", "owner_id", -g.ID, "items", len(resp.Items))
+	slog.Debug("wall.get ok", "owner_id", -g.ID, "items", len(resp.Items))
 	svc.processPosts(ctx, resp.Items, g)
 	return nil
 }
@@ -215,7 +215,7 @@ func (svc *service) processPosts(ctx context.Context, posts []object.WallWallpos
 				}
 			}
 		}
-		slog.Info("got msg", "owner_id", post.OwnerID, "post_id", post.ID, "date", post.Date, "text", text, "link", link)
+		slog.Debug("got msg", "owner_id", post.OwnerID, "post_id", post.ID, "date", post.Date, "text", text, "link", link)
 		// Persist new message in SQLite (best-effort)
 		if err := svc.SaveMessage(post.OwnerID, post.ID, int64(post.Date), post.Text, text, link, photos); err != nil {
 			slog.Error("db save failed", "err", err, "owner_id", post.OwnerID, "post_id", post.ID)
