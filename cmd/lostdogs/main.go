@@ -187,8 +187,11 @@ func (svc *service) processPosts(ctx context.Context, posts []object.WallWallpos
 			slog.Debug("skip old post", "post_id", post.ID, "date", post.Date, "last_ts", g.LastTS)
 			continue
 		}
-		// Skip if already saved in DB (persistent dedupe)
-		n, err := svc.queries.ExistsPost(ctx, sqldb.ExistsPostParams{OwnerID: int64(post.OwnerID), PostID: int64(post.ID)})
+		// Skip if already saved in DB (persistent dedupe). Use a short-lived context so
+		// this check is not coupled to the outer scan timeout.
+		exCtx, exCancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+		n, err := svc.queries.ExistsPost(exCtx, sqldb.ExistsPostParams{OwnerID: int64(post.OwnerID), PostID: int64(post.ID)})
+		exCancel()
 		if err != nil {
 			slog.Error("exists check failed", "owner_id", post.OwnerID, "post_id", post.ID, "err", err)
 			// best-effort: continue as new to avoid missing data
