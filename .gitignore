@@ -21,7 +21,7 @@ go.work.sum
 *.log
 
 # Environment and direnv
-.envrc
+.envrc.local
 .direnv/
 
 # OS/editor noise
