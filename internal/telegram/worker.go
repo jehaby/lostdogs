@@ -3,6 +3,7 @@ package telegram
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/go-telegram/bot"
@@ -74,10 +75,13 @@ func (w *Worker) tick() error {
 			// Mark failed permanently if cannot load post
 			msg := "get post: " + err.Error()
 			_ = w.q.MarkFailed(ctx, sqldb.MarkFailedParams{MaxRetries: int64(w.opt.MaxRetries), LastError: &msg, ID: r.ID})
+			slog.Error("tg worker: load post failed", "owner_id", r.OwnerID, "post_id", r.PostID, "err", err)
 			continue
 		}
 		// Build message
 		text := BuildMessage(post)
+		// Ensure valid UTF-8 to avoid Telegram "text must be encoded in UTF-8"
+		text = strings.ToValidUTF8(text, "")
 		// Send with HTML parse mode
 		resp, err := w.cli.Bot.SendMessage(ctx, &bot.SendMessageParams{
 			ChatID:    w.cli.ChatID,
@@ -85,8 +89,8 @@ func (w *Worker) tick() error {
 			ParseMode: models.ParseModeHTML,
 		})
 		if err != nil {
+			slog.Error("tg send failed", "owner_id", r.OwnerID, "post_id", r.PostID, "chat_id", w.cli.ChatID, "err", err)
 			msg := err.Error()
-			// Simple retry policy: requeue until MaxRetries
 			_ = w.q.MarkFailed(ctx, sqldb.MarkFailedParams{MaxRetries: int64(w.opt.MaxRetries), LastError: &msg, ID: r.ID})
 			continue
 		}
