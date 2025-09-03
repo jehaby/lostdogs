@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "lostdogs-ops"
+version = "0.1.0"
+description = "Deployment tooling for lostdogs (Ansible pinned via Poetry)"
+authors = ["lostdogs maintainers"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.12,<3.14"
+ansible-core = "~2.19.0"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

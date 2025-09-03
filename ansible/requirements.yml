@@ -1,0 +1,8 @@
+---
+# Pin collections your playbooks will use.
+# Adjust versions as you finalize modules.
+collections:
+  - name: community.docker
+    version: "4.7.0"
+  - name: ansible.posix
+    # Omit version to install latest stable available
