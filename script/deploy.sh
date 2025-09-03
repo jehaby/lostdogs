@@ -16,7 +16,8 @@ Required:
 Optional:
   --image IMAGE     Override IMAGE for this deploy
   --remote-path DIR Remote directory on the host (default: /home/$REMOTE_USER/infra/lostdogs)
-  --platform VAL    Build platform (e.g., linux/amd64), requires buildx
+  --platform VAL    Build platform (default: linux/amd64), requires buildx
+  --dockerfile F    Dockerfile path (default: ./Dockerfile)
   --set KEY=VAL     Override/add any env variable (repeatable)
 
 Examples:
@@ -33,6 +34,8 @@ require_bin ssh
 ENV_FILE=""
 LOCAL_IMAGE=""
 REMOTE_PATH=""
+PLATFORM="linux/amd64"
+DOCKERFILE="Dockerfile"
 declare -a SET_OVERRIDES
 
 while [[ $# -gt 0 ]]; do
@@ -40,6 +43,8 @@ while [[ $# -gt 0 ]]; do
     --env-file) ENV_FILE="$2"; shift 2;;
     --image) LOCAL_IMAGE="$2"; shift 2;;
     --remote-path) REMOTE_PATH="$2"; shift 2;;
+    --platform) PLATFORM="$2"; shift 2;;
+    --dockerfile) DOCKERFILE="$2"; shift 2;;
     --set) SET_OVERRIDES+=("$2"); shift 2;;
     -h|--help) usage; exit 0;;
     *) echo "Unknown argument: $1" >&2; usage; exit 2;;
@@ -70,9 +75,17 @@ IMAGE_FILENAME="lostdogs-image.tar"
 REMOTE_ENV_FILE="${REMOTE_PATH%/}/.env"
 REMOTE_COMPOSE_FILE="${REMOTE_PATH%/}/compose.yml"
 
-echo "1) Building Docker image: ${IMAGE}"
-# Always build; Docker will leverage cache and rebuild only what's changed
-docker build -t "${IMAGE}" .
+echo "1) Building Docker image: ${IMAGE} for platform ${PLATFORM}"
+# Use buildx to ensure correct platform (e.g., macOS -> linux/amd64)
+if ! docker buildx version >/dev/null 2>&1; then
+  echo "docker buildx is required for cross-platform builds (install Docker Desktop / enable buildx)" >&2
+  exit 2
+fi
+docker buildx build \
+  --platform "${PLATFORM}" \
+  --file "${DOCKERFILE}" \
+  --load \
+  -t "${IMAGE}" .
 
 echo "2) Saving image -> ${IMAGE_FILENAME}"
 docker save "${IMAGE}" -o "${IMAGE_FILENAME}"
