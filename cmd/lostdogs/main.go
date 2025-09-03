@@ -87,6 +87,7 @@ func main() {
 
 	// Optionally start Telegram worker
 	if cfg.TGEnabled {
+		slog.Info("starting tg worker")
 		if err := telegramStart(svc, cfg); err != nil {
 			slog.Error("telegram start failed", "err", err)
 		}
@@ -112,7 +113,7 @@ func main() {
 	// Run initial scan immediately
 	svc.scanAllGroups(gs)
 
-	ticker := time.NewTicker(30 * time.Second) // polite polling
+	ticker := time.NewTicker(60 * time.Second) // polite polling
 	defer ticker.Stop()
 
 	for {

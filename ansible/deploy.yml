@@ -1,0 +1,117 @@
+---
+- name: Build Docker image (local)
+  hosts: localhost
+  gather_facts: false
+  vars:
+    repo_root: "{{ playbook_dir }}/.."
+    image: "jehaby/lostdogs:latest"
+    platform: "linux/amd64"
+    dockerfile: "{{ repo_root }}/Dockerfile"
+    build_dir: "{{ repo_root }}/build"
+    image_tar_local: "{{ build_dir }}/lostdogs-image.tar"
+  tags: [local]
+  tasks:
+    - name: Ensure local build directory exists
+      ansible.builtin.file:
+        path: "{{ build_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Build image with docker_image_build (local)
+      community.docker.docker_image_build:
+        name: "{{ image }}"
+        path: "{{ repo_root }}"
+        dockerfile: "{{ dockerfile }}"
+        platform: "{{ platform }}"
+        pull: true
+        rebuild: "{{ rebuild | default(never) }}"
+        nocache: "{{ nocache | default(false) | bool }}"
+
+    - name: Save image to tar (local)
+      ansible.builtin.command:
+        cmd: docker save "{{ image }}" -o "{{ image_tar_local }}"
+
+- name: Deploy on remote host
+  hosts: all
+  gather_facts: false
+  vars:
+    repo_root: "{{ playbook_dir }}/.."
+    image: "jehaby/lostdogs:latest"
+    build_dir: "{{ repo_root }}/build"
+    image_tar_local: "{{ build_dir }}/lostdogs-image.tar"
+    image_tar_remote: "{{ remote_path }}/lostdogs-image.tar"
+    env_src: "{{ repo_root }}/deploy.env"
+    compose_src: "{{ repo_root }}/compose.yml"
+    config_yaml_src: "{{ repo_root }}/config.yaml"
+    config_yml_src: "{{ repo_root }}/config.yml"
+  tags: [remote]
+  tasks:
+    - name: Ensure remote directory exists
+      ansible.builtin.file:
+        path: "{{ remote_path }}"
+        state: directory
+        mode: "0755"
+
+    - name: Copy image tar to remote
+      ansible.builtin.copy:
+        src: "{{ image_tar_local }}"
+        dest: "{{ image_tar_remote }}"
+        mode: "0644"
+
+    - name: Copy compose.yml to remote
+      ansible.builtin.copy:
+        src: "{{ compose_src }}"
+        dest: "{{ remote_path }}/compose.yml"
+        mode: "0644"
+
+    - name: Validate required env values are set
+      ansible.builtin.assert:
+        that:
+          - vk_token is defined
+          - tg_token is defined
+          - tg_chat is defined
+        fail_msg: "vk_token, tg_token, tg_chat must be defined (set in group_vars or inventory)"
+
+    - name: Check for config.yaml locally
+      ansible.builtin.stat:
+        path: "{{ config_yaml_src }}"
+      register: cfg_yaml
+
+    - name: Check for config.yml locally
+      ansible.builtin.stat:
+        path: "{{ config_yml_src }}"
+      register: cfg_yml
+
+    - name: Copy config (yaml/yml) to remote as config.yml
+      ansible.builtin.copy:
+        src: "{{ (cfg_yaml.stat.exists | ternary(config_yaml_src, config_yml_src)) }}"
+        dest: "{{ remote_path }}/config.yml"
+        mode: "0644"
+      when: cfg_yaml.stat.exists or cfg_yml.stat.exists
+
+    - name: Render .env from template
+      ansible.builtin.template:
+        src: "{{ playbook_dir }}/templates/dotenv.j2"
+        dest: "{{ remote_path }}/.env"
+        mode: "0600"
+
+    - name: Load Docker image on remote
+      ansible.builtin.shell: |
+        set -euo pipefail
+        docker load -i "{{ image_tar_remote }}"
+      args:
+        executable: /bin/bash
+
+    - name: Deploy with docker compose v2
+      community.docker.docker_compose_v2:
+        project_src: "{{ remote_path }}"
+        files:
+          - compose.yml
+        remove_orphans: true
+        recreate: always
+        state: present
+
+    - name: Remove image tar from remote
+      ansible.builtin.file:
+        path: "{{ image_tar_remote }}"
+        state: absent

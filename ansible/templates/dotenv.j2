@@ -1,0 +1,12 @@
+IMAGE={{ image | default('jehaby/lostdogs:latest') }}
+
+# Required
+VK_TOKEN={{ vk_token }}
+TG_TOKEN={{ tg_token }}
+TG_CHAT={{ tg_chat }}
+
+# Optional
+TG_ENABLED={{ tg_enabled | default('false') }}
+LOG_LEVEL={{ log_level | default('info') }}
+DB_CONN_STRING={{ db_conn_string | default('file:/data/lostdogs.db?cache=shared&mode=rwc') }}
+

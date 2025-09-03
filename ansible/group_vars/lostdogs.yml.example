@@ -1,0 +1,16 @@
+# Group variables for the 'lostdogs' inventory group.
+# Copy to ansible/group_vars/lostdogs.yml and fill real values.
+
+# Image to deploy (can be overridden per-run)
+image: jehaby/lostdogs:latest
+
+# Required runtime secrets
+vk_token: "REPLACE_ME"
+tg_token: "REPLACE_ME"
+tg_chat: -1001234567890
+
+# Optional tuning
+tg_enabled: true
+log_level: info
+db_conn_string: "file:/data/lostdogs.db?cache=shared&mode=rwc"
+

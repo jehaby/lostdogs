@@ -5,6 +5,7 @@
 # Binaries and build artifacts
 bin/
 dist/
+build/
 *.exe
 *.dll
 *.so
@@ -25,4 +26,3 @@ config.local.*
 *.swp
 *.swo
 *.DS_Store
-

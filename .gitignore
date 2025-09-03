@@ -31,3 +31,5 @@ Thumbs.db
 *.swo
 
 deploy.env
+inventory.ini
+ansible/group_vars/lostdogs.yml
