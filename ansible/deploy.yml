@@ -40,10 +40,6 @@
     build_dir: "{{ repo_root }}/build"
     image_tar_local: "{{ build_dir }}/lostdogs-image.tar"
     image_tar_remote: "{{ remote_path }}/lostdogs-image.tar"
-    env_src: "{{ repo_root }}/deploy.env"
-    compose_src: "{{ repo_root }}/compose.yml"
-    config_yaml_src: "{{ repo_root }}/config.yaml"
-    config_yml_src: "{{ repo_root }}/config.yml"
   tags: [remote]
   tasks:
     - name: Ensure remote directory exists
@@ -60,7 +56,7 @@
 
     - name: Copy compose.yml to remote
       ansible.builtin.copy:
-        src: "{{ compose_src }}"
+        src: "{{ repo_root }}/compose.yml"
         dest: "{{ remote_path }}/compose.yml"
         mode: "0644"
 
@@ -72,22 +68,11 @@
           - tg_chat is defined
         fail_msg: "vk_token, tg_token, tg_chat must be defined (set in group_vars or inventory)"
 
-    - name: Check for config.yaml locally
-      ansible.builtin.stat:
-        path: "{{ config_yaml_src }}"
-      register: cfg_yaml
-
-    - name: Check for config.yml locally
-      ansible.builtin.stat:
-        path: "{{ config_yml_src }}"
-      register: cfg_yml
-
     - name: Copy config (yaml/yml) to remote as config.yml
       ansible.builtin.copy:
-        src: "{{ (cfg_yaml.stat.exists | ternary(config_yaml_src, config_yml_src)) }}"
+        src: "{{ repo_root }}/config.yml"
         dest: "{{ remote_path }}/config.yml"
         mode: "0644"
-      when: cfg_yaml.stat.exists or cfg_yml.stat.exists
 
     - name: Render .env from template
       ansible.builtin.template:
