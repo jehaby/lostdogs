@@ -30,7 +30,7 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /out/lostdogs /app/lostdogs
-COPY resources ./resources
+COPY resources/db/migrartions ./resources/db/migrations
 
 VOLUME ["/data"]
 

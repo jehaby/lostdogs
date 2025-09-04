@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"path/filepath"
+
 	"slices"
 	"strings"
 	"time"
@@ -21,6 +21,7 @@ import (
 	tele "github.com/jehaby/lostdogs/internal/telegram"
 	itypes "github.com/jehaby/lostdogs/internal/types"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/pressly/goose/v3"
 )
 
 type Group struct {
@@ -58,11 +59,12 @@ func newService(cfg config) *service {
 		slog.Error("ping sqlite failed", "err", err)
 		os.Exit(1)
 	}
-	// Ensure schema is applied from resources/db/schema.sql
-	if err := applySchemaFile(svc.db, "resources/db/schema.sql"); err != nil {
-		slog.Error("apply schema failed", "err", err)
+
+	if err := goose.Up(svc.db, "./resources/db/migrations"); err != nil {
+		slog.Error("error applying migrations", "err", err)
 		os.Exit(1)
 	}
+
 	svc.queries = sqldb.New(svc.db)
 
 	// Initialize VK client
@@ -312,22 +314,6 @@ func (s *service) SaveMessage(ownerID int, postID int, date int64, raw, normaliz
 	// Enqueue to Telegram outbox for matching posts (e.g., lost)
 	if err := tele.EnqueueIfMatch(ctx, s.queries, sqldb.EnqueueOutboxParams{OwnerID: int64(ownerID), PostID: int64(postID)}, p); err != nil {
 		slog.Error("telegram enqueue failed", "err", err, "owner_id", ownerID, "post_id", postID)
-	}
-	return nil
-}
-
-func applySchemaFile(db *sql.DB, schemaPath string) error {
-	// Resolve absolute path for better error messages
-	abs := schemaPath
-	if p, err := filepath.Abs(schemaPath); err == nil {
-		abs = p
-	}
-	b, err := os.ReadFile(schemaPath)
-	if err != nil {
-		return fmt.Errorf("read schema %s: %w", abs, err)
-	}
-	if _, err := db.Exec(string(b)); err != nil {
-		return fmt.Errorf("exec schema %s: %w", abs, err)
 	}
 	return nil
 }

@@ -12,6 +12,7 @@ import (
 	root "github.com/jehaby/lostdogs"
 	sqldb "github.com/jehaby/lostdogs/internal/db"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/require"
 )
 
@@ -26,13 +27,12 @@ type fixturePost struct {
 func TestProcessPosts_CountLostFromFixture(t *testing.T) {
 	t.Parallel()
 
-	// Open isolated in-memory SQLite and apply schema
+	// Open isolated in-memory SQLite and apply migrations
 	db, err := sql.Open("sqlite3", "file:memdb_process_posts?cache=shared&mode=memory")
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
 
-	schema := filepath.Join("..", "..", "resources", "db", "schema.sql")
-	require.NoError(t, applySchemaFile(db, schema))
+	require.NoError(t, applyMigrations(db))
 
 	svc := &service{
 		db:      db,
@@ -73,4 +73,12 @@ func TestProcessPosts_CountLostFromFixture(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, expectLost, gotLost, "lost posts count should match parse results")
+}
+
+func applyMigrations(db *sql.DB) error {
+	if err := goose.SetDialect("sqlite3"); err != nil {
+		return err
+	}
+	goose.SetDialect("sqlite3")
+	return goose.Up(db, "../../resources/db/migrations")
 }

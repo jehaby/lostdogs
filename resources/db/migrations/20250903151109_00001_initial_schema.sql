@@ -1,3 +1,5 @@
+-- +goose Up
+-- SQL in this section is executed when the migration is applied.
 -- SQLite schema for lostdogs
 
 PRAGMA foreign_keys = ON;
@@ -45,3 +47,8 @@ CREATE TABLE IF NOT EXISTS outbox (
 
 CREATE INDEX IF NOT EXISTS idx_outbox_status_created_at ON outbox(status, created_at);
 CREATE INDEX IF NOT EXISTS idx_outbox_lease ON outbox(status, leased_until);
+
+-- +goose Down
+-- SQL in this section is executed when the migration is rolled back.
+DROP TABLE IF EXISTS posts;
+DROP TABLE IF EXISTS outbox;
