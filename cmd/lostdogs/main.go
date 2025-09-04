@@ -60,7 +60,7 @@ func newService(cfg config) *service {
 		os.Exit(1)
 	}
 
-	if err := goose.Up(svc.db, "./resources/db/migrations"); err != nil {
+	if err := applyMigrations(svc.db, "./resources/db/migrations"); err != nil {
 		slog.Error("error applying migrations", "err", err)
 		os.Exit(1)
 	}
@@ -337,3 +337,13 @@ func normalize(s string) string {
 }
 
 // ----- End
+
+func applyMigrations(db *sql.DB, dir string) error {
+	if err := goose.SetDialect("sqlite3"); err != nil {
+		return err
+	}
+	if err := goose.SetDialect("sqlite3"); err != nil {
+		return err
+	}
+	return goose.Up(db, dir)
+}

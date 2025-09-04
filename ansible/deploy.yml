@@ -24,7 +24,7 @@
         dockerfile: "{{ dockerfile }}"
         platform: "{{ platform }}"
         pull: true
-        rebuild: "{{ rebuild | default(never) }}"
+        rebuild: "{{ rebuild | default('always') }}"
         nocache: "{{ nocache | default(false) | bool }}"
 
     - name: Save image to tar (local)

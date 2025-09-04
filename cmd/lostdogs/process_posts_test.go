@@ -12,7 +12,6 @@ import (
 	root "github.com/jehaby/lostdogs"
 	sqldb "github.com/jehaby/lostdogs/internal/db"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/require"
 )
 
@@ -32,7 +31,7 @@ func TestProcessPosts_CountLostFromFixture(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
 
-	require.NoError(t, applyMigrations(db))
+	require.NoError(t, applyMigrations(db, "../../resources/db/migrations"))
 
 	svc := &service{
 		db:      db,
@@ -73,12 +72,4 @@ func TestProcessPosts_CountLostFromFixture(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, expectLost, gotLost, "lost posts count should match parse results")
-}
-
-func applyMigrations(db *sql.DB) error {
-	if err := goose.SetDialect("sqlite3"); err != nil {
-		return err
-	}
-	goose.SetDialect("sqlite3")
-	return goose.Up(db, "../../resources/db/migrations")
 }
