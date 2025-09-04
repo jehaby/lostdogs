@@ -2,7 +2,7 @@ version: "2"
 sql:
   - engine: sqlite
     schema:
-      - resources/db/schema.sql
+      - resources/db/migrations
     queries:
       - resources/db/queries.sql
     gen:
