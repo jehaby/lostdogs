@@ -14,3 +14,16 @@ tg_enabled: true
 log_level: info
 db_conn_string: "file:/data/lostdogs.db?cache=shared&mode=rwc"
 
+# VK Outbound (optional)
+# Enable reposting to a VK destination wall (group):
+vk_out_enabled: false
+# If not set, app will use vk_token
+vk_out_token: ""
+# Destination owner id; negative for a group (e.g., -123456)
+vk_out_owner_id: 0
+# Post as the group account
+vk_out_from_group: true
+# Rate limit (messages per second)
+vk_out_rate_per_sec: 1.0
+# HTTP timeout for VK client
+vk_out_http_timeout: "10s"

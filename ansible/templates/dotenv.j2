@@ -10,3 +10,11 @@ TG_ENABLED={{ tg_enabled | default('false') }}
 LOG_LEVEL={{ log_level | default('info') }}
 DB_CONN_STRING={{ db_conn_string | default('file:/data/lostdogs.db?cache=shared&mode=rwc') }}
 
+# VK Outbound (optional)
+VK_OUT_ENABLED={{ vk_out_enabled | default('false') }}
+# If not set, app falls back to VK_TOKEN
+VK_OUT_TOKEN={{ vk_out_token | default('') }}
+VK_OUT_OWNER_ID={{ vk_out_owner_id | default('0') }}
+VK_OUT_FROM_GROUP={{ vk_out_from_group | default('true') }}
+VK_OUT_RATE_PER_SEC={{ vk_out_rate_per_sec | default('1.0') }}
+VK_OUT_HTTP_TIMEOUT={{ vk_out_http_timeout | default('10s') }}
