@@ -16,6 +16,8 @@ go.work.sum
 
 # SQLite databases and logs
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
 *.log
