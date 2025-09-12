@@ -1,28 +1,26 @@
 package main
 
 import (
-    "context"
-    "database/sql"
-    "fmt"
-    "log/slog"
-    "net/http"
-    "os"
+	"context"
+	"database/sql"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"os"
 
-    "slices"
-    "strings"
-    "time"
+	"slices"
+	"strings"
+	"time"
 
-    vkapi "github.com/SevereCloud/vksdk/v3/api"
-    object "github.com/SevereCloud/vksdk/v3/object"
-    "github.com/caarlos0/env/v11"
-    yaml "github.com/goccy/go-yaml"
-    "github.com/jehaby/lostdogs"
-    sqldb "github.com/jehaby/lostdogs/internal/db"
-    tele "github.com/jehaby/lostdogs/internal/telegram"
-    vk "github.com/jehaby/lostdogs/internal/vk"
-    itypes "github.com/jehaby/lostdogs/internal/types"
-    _ "github.com/mattn/go-sqlite3"
-    "github.com/pressly/goose/v3"
+	vkapi "github.com/SevereCloud/vksdk/v3/api"
+	object "github.com/SevereCloud/vksdk/v3/object"
+	"github.com/caarlos0/env/v11"
+	yaml "github.com/goccy/go-yaml"
+	"github.com/jehaby/lostdogs"
+	sqldb "github.com/jehaby/lostdogs/internal/db"
+	itypes "github.com/jehaby/lostdogs/internal/types"
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/pressly/goose/v3"
 )
 
 type Group struct {
@@ -32,20 +30,20 @@ type Group struct {
 }
 
 type config struct {
-    VKToken           string     `env:"VK_TOKEN,required"`
-    LogLevel          slog.Level `env:"LOG_LEVEL" envDefault:"info"`
-    TGBotDebugEnabled bool       `env:"TGBOT_DEBUG_ENABLED" envDefault:"false"`
-    DBConnString      string     `env:"DB_CONN_STRING" envDefault:"file:./resources/db/lostdogs.db?cache=shared&mode=rwc"`
-    TGEnabled         bool       `env:"TG_ENABLED" envDefault:"false"`
-    TGToken           string     `env:"TG_TOKEN"`
-    TGChat            int64      `env:"TG_CHAT"`
-    // VK outbound (reposting) configuration
-    VKOutEnabled   bool    `env:"VK_OUT_ENABLED" envDefault:"false"`
-    VKOutToken     string  `env:"VK_OUT_TOKEN"`
-    VKOutOwnerID   int64   `env:"VK_OUT_OWNER_ID"`
-    VKOutRatePerSec float64 `env:"VK_OUT_RATE_PER_SEC" envDefault:"1.0"`
-    VKOutHTTPTimeout time.Duration `env:"VK_OUT_HTTP_TIMEOUT" envDefault:"10s"`
-    VKOutFromGroup bool    `env:"VK_OUT_FROM_GROUP" envDefault:"true"`
+	VKToken           string     `env:"VK_TOKEN,required"`
+	LogLevel          slog.Level `env:"LOG_LEVEL" envDefault:"info"`
+	TGBotDebugEnabled bool       `env:"TGBOT_DEBUG_ENABLED" envDefault:"false"`
+	DBConnString      string     `env:"DB_CONN_STRING" envDefault:"file:./resources/db/lostdogs.db?cache=shared&mode=rwc"`
+	TGEnabled         bool       `env:"TG_ENABLED" envDefault:"false"`
+	TGToken           string     `env:"TG_TOKEN"`
+	TGChat            int64      `env:"TG_CHAT"`
+	// VK outbound (reposting) configuration
+	VKOutEnabled     bool          `env:"VK_OUT_ENABLED" envDefault:"false"`
+	VKOutToken       string        `env:"VK_OUT_TOKEN"`
+	VKOutOwnerID     int64         `env:"VK_OUT_OWNER_ID"`
+	VKOutRatePerSec  float64       `env:"VK_OUT_RATE_PER_SEC" envDefault:"1.0"`
+	VKOutHTTPTimeout time.Duration `env:"VK_OUT_HTTP_TIMEOUT" envDefault:"10s"`
+	VKOutFromGroup   bool          `env:"VK_OUT_FROM_GROUP" envDefault:"true"`
 }
 
 type service struct {
@@ -95,21 +93,21 @@ func main() {
 
 	svc := newService(cfg)
 
-    // Optionally start Telegram worker
-    if cfg.TGEnabled {
-        slog.Info("starting tg worker")
-        if err := telegramStart(svc, cfg); err != nil {
-            slog.Error("telegram start failed", "err", err)
-        }
-    }
+	// Optionally start Telegram worker
+	if cfg.TGEnabled {
+		slog.Info("starting tg worker")
+		if err := telegramStart(svc, cfg); err != nil {
+			slog.Error("telegram start failed", "err", err)
+		}
+	}
 
-    // Optionally start VK outbound worker
-    if cfg.VKOutEnabled {
-        slog.Info("starting vk worker")
-        if err := vkStart(svc, cfg); err != nil {
-            slog.Error("vk start failed", "err", err)
-        }
-    }
+	// Optionally start VK outbound worker
+	if cfg.VKOutEnabled {
+		slog.Info("starting vk worker")
+		if err := vkStart(svc, cfg); err != nil {
+			slog.Error("vk start failed", "err", err)
+		}
+	}
 
 	var groups []string
 	groups = loadGroupsFromYAML()
@@ -324,18 +322,31 @@ func (s *service) SaveMessage(ownerID int, postID int, date int64, raw, normaliz
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-    if err := s.queries.UpsertPost(ctx, params); err != nil {
-        return err
-    }
-    // Enqueue to Telegram outbox for matching posts (e.g., lost)
-    if err := tele.EnqueueIfMatch(ctx, s.queries, sqldb.EnqueueOutboxParams{OwnerID: int64(ownerID), PostID: int64(postID)}, p); err != nil {
-        slog.Error("telegram enqueue failed", "err", err, "owner_id", ownerID, "post_id", postID)
-    }
-    // Enqueue to VK outbox for matching posts (e.g., lost)
-    if err := vk.EnqueueIfMatchVK(ctx, s.queries, sqldb.EnqueueOutboxVKParams{OwnerID: int64(ownerID), PostID: int64(postID)}, p); err != nil {
-        slog.Error("vk enqueue failed", "err", err, "owner_id", ownerID, "post_id", postID)
-    }
-    return nil
+	if err := s.queries.UpsertPost(ctx, params); err != nil {
+		return err
+	}
+
+	if shouldPost(p) {
+		// Enqueue to Telegram outbox for matching posts (e.g., lost)
+		if err := s.queries.EnqueueOutbox(ctx, sqldb.EnqueueOutboxParams{OwnerID: int64(ownerID), PostID: int64(postID)}); err != nil {
+			slog.Error("telegram enqueue failed", "err", err, "owner_id", ownerID, "post_id", postID)
+		}
+		// Enqueue to VK outbox for matching posts (e.g., lost)
+		if err := s.queries.EnqueueOutboxVK(ctx, sqldb.EnqueueOutboxVKParams{OwnerID: int64(ownerID), PostID: int64(postID)}); err != nil {
+			slog.Error("vk enqueue failed", "err", err, "owner_id", ownerID, "post_id", postID)
+		}
+	}
+
+	return nil
+}
+
+var allowedTypes = []lostdogs.PostType{lostdogs.TypeLost, lostdogs.TypeFound, lostdogs.TypeSighting}
+
+func shouldPost(p lostdogs.Post) bool {
+	if slices.Contains(allowedTypes, p.Type) && p.Animal == lostdogs.AnimalDog {
+		return true
+	}
+	return false
 }
 
 func initLogger(level slog.Level) {

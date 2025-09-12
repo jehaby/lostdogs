@@ -1,11 +1,11 @@
 package vk
 
 import (
-    "fmt"
-    "strings"
-    "text/template"
+	"fmt"
+	"strings"
+	"text/template"
 
-    sqldb "github.com/jehaby/lostdogs/internal/db"
+	sqldb "github.com/jehaby/lostdogs/internal/db"
 )
 
 var msgTmpl = template.Must(template.New("vkmsg").Parse(`{{- if .Title -}}{{.Title}}
@@ -14,27 +14,27 @@ var msgTmpl = template.Must(template.New("vkmsg").Parse(`{{- if .Title -}}{{.Tit
 {{end}}Источник VK: {{.Link}}`))
 
 type tmplData struct {
-    Title string
-    Text  string
-    Link  string
+	Title string
+	Text  string
+	Link  string
 }
 
 // BuildMessage builds a plain-text message for wall.post using text/template.
 func BuildMessage(p sqldb.GetPostRow) string {
-    title := typeTitle(p.Type)
-    body := p.Text
-    if len(body) > 3500 {
-        body = body[:3500] + "…"
-    }
-    data := tmplData{
-        Title: title,
-        Text:  body,
-        Link:  vkLink(p.OwnerID, p.PostID),
-    }
+	title := typeTitle(p.Type)
+	body := p.Text
+	if len(body) > 3500 {
+		body = body[:3500] + "…"
+	}
+	data := tmplData{
+		Title: title,
+		Text:  body,
+		Link:  vkLink(p.OwnerID, p.PostID),
+	}
 
-    var b strings.Builder
-    _ = msgTmpl.Execute(&b, data)
-    return b.String()
+	var b strings.Builder
+	_ = msgTmpl.Execute(&b, data)
+	return b.String()
 }
 
 func vkLink(ownerID, postID int64) string {

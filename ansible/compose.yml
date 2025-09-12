@@ -5,13 +5,9 @@ services:
     restart: unless-stopped
     working_dir: /app
     entrypoint: [ "/app/lostdogs" ]
-    environment:
-      - VK_TOKEN=${VK_TOKEN}
-      - TG_TOKEN=${TG_TOKEN}
-      - TG_CHAT=${TG_CHAT}
-      - TG_ENABLED=${TG_ENABLED:-false}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-      - DB_CONN_STRING=${DB_CONN_STRING:-file:/data/lostdogs.db?cache=shared&mode=rwc}
+    env_file:
+      - path: .env
+        required: true
     volumes:
       - ./config.yml:/app/config.yml:ro
       - ${DB_VOLUME_NAME:-lostdogs_db_data}:${DB_DIR_IN_CONTAINER:-/data}

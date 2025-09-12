@@ -3,6 +3,7 @@
 .gitignore
 
 # Binaries and build artifacts
+ansible/
 bin/
 dist/
 build/
@@ -16,6 +17,7 @@ build/
 
 # Local env/config
 .envrc
+.envrc.local
 .envrc.example
 *.env
 config.local.*

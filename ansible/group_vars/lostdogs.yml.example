@@ -12,7 +12,7 @@ tg_chat: -1001234567890
 # Optional tuning
 tg_enabled: true
 log_level: info
-db_conn_string: "file:/data/lostdogs.db?cache=shared&mode=rwc"
+db_conn_string: "file:/data/lostdogs.db?mode=rwc&_journal_mode=WAL&_synchronous=NORMAL&_busy_timeout=5000"
 
 # VK Outbound (optional)
 # Enable reposting to a VK destination wall (group):

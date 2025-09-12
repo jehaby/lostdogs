@@ -56,7 +56,7 @@
 
     - name: Copy compose.yml to remote
       ansible.builtin.copy:
-        src: "{{ repo_root }}/compose.yml"
+        src: "{{ playbook_dir }}/compose.yml"
         dest: "{{ remote_path }}/compose.yml"
         mode: "0644"
 

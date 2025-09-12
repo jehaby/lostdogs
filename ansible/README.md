@@ -15,7 +15,7 @@ Usage
   - cp ansible/group_vars/lostdogs.yml.example ansible/group_vars/lostdogs.yml
   - Edit vk_token, tg_token, tg_chat, image, etc.
 - Build locally and deploy:
-  - poetry run ansible-playbook -i ansible/inventory.ini ansible/deploy.yml \
+  - poetry run ansible-playbook ansible/deploy.yml \
      -e remote_path=/home/USER/infra/lostdogs \
      -e platform=linux/amd64
 
