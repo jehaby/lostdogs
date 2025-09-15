@@ -43,7 +43,7 @@ type config struct {
 	VKOutOwnerID     int64         `env:"VK_OUT_OWNER_ID"`
 	VKOutRatePerSec  float64       `env:"VK_OUT_RATE_PER_SEC" envDefault:"1.0"`
 	VKOutHTTPTimeout time.Duration `env:"VK_OUT_HTTP_TIMEOUT" envDefault:"10s"`
-	VKOutFromGroup   bool          `env:"VK_OUT_FROM_GROUP" envDefault:"true"`
+	VKOutFromGroup   bool          `env:"VK_OUT_FROM_GROUP" envDefault:"false"`
 }
 
 type service struct {

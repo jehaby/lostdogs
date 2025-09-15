@@ -76,9 +76,9 @@ func (w *Worker) tick() error {
 		text = strings.ToValidUTF8(text, "")
 
 		params := vkapi.Params{
-			"owner_id":   w.cli.DestOwnerID,
-			"message":    text,
-			"from_group": 0,
+			"owner_id":     w.cli.DestOwnerID,
+			"message":      text,
+			"publish_date": time.Now().Add(72 * time.Hour).Unix(),
 		}
 		if w.cli.FromGroup {
 			params["from_group"] = 1
